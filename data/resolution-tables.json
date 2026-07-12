@@ -1,0 +1,38 @@
+{
+  "_comment": "Known text-to-image / video model output pixel grids. When an uploaded image's WxH matches an entry exactly, Stage 0 returns aspect_ratio_resolution deterministically at confidence 1.0 and raises the prior that the image came from that family. Extend freely — matching is exact on width+height. Sources: published model spec/aspect-ratio docs. Values are the standard emitted grids at the time of writing (July 2026); a non-match is NOT evidence against a family, only a lack of positive signal.",
+  "grids": [
+    { "w": 1024, "h": 1024, "aspect": "1:1", "class": "1K", "family": "Generic diffusion (SDXL / DALL·E 3 / MJ)", "label": "1024×1024 1:1 1K" },
+    { "w": 1024, "h": 1792, "aspect": "9:16", "class": "1K", "family": "DALL·E 3", "label": "1024×1792 portrait (DALL·E 3)" },
+    { "w": 1792, "h": 1024, "aspect": "16:9", "class": "1K", "family": "DALL·E 3", "label": "1792×1024 landscape (DALL·E 3)" },
+
+    { "w": 2048, "h": 2048, "aspect": "1:1", "class": "2K", "family": "Gemini Image (2K)", "label": "2048×2048 1:1 2K (Gemini)" },
+    { "w": 2752, "h": 1536, "aspect": "16:9", "class": "2K", "family": "Gemini Image (2K)", "label": "2752×1536 16:9 2K (Gemini)" },
+    { "w": 1536, "h": 2752, "aspect": "9:16", "class": "2K", "family": "Gemini Image (2K)", "label": "1536×2752 9:16 2K (Gemini)" },
+    { "w": 2304, "h": 1792, "aspect": "4:3", "class": "2K", "family": "Gemini Image (2K)", "label": "2304×1792 4:3 2K (Gemini)" },
+    { "w": 1792, "h": 2304, "aspect": "3:4", "class": "2K", "family": "Gemini Image (2K)", "label": "1792×2304 3:4 2K (Gemini)" },
+    { "w": 2496, "h": 1664, "aspect": "3:2", "class": "2K", "family": "Gemini Image (2K)", "label": "2496×1664 3:2 2K (Gemini)" },
+    { "w": 1664, "h": 2496, "aspect": "2:3", "class": "2K", "family": "Gemini Image (2K)", "label": "1664×2496 2:3 2K (Gemini)" },
+    { "w": 1024, "h": 1024, "aspect": "1:1", "class": "1K", "family": "Gemini Image (1K)", "label": "1024×1024 1:1 1K (Gemini)" },
+
+    { "w": 1456, "h": 816, "aspect": "16:9", "class": "1K", "family": "Midjourney v6/v7", "label": "1456×816 16:9 (Midjourney)" },
+    { "w": 816, "h": 1456, "aspect": "9:16", "class": "1K", "family": "Midjourney v6/v7", "label": "816×1456 9:16 (Midjourney)" },
+    { "w": 1232, "h": 928, "aspect": "4:3", "class": "1K", "family": "Midjourney v6/v7", "label": "1232×928 4:3 (Midjourney)" },
+    { "w": 1344, "h": 768, "aspect": "7:4", "class": "1K", "family": "SDXL preset", "label": "1344×768 7:4 (SDXL)" },
+    { "w": 1216, "h": 832, "aspect": "3:2", "class": "1K", "family": "SDXL preset", "label": "1216×832 3:2 (SDXL)" },
+    { "w": 832, "h": 1216, "aspect": "2:3", "class": "1K", "family": "SDXL preset", "label": "832×1216 2:3 (SDXL)" },
+    { "w": 896, "h": 1152, "aspect": "3:4", "class": "1K", "family": "SDXL preset", "label": "896×1152 3:4 (SDXL)" },
+    { "w": 1152, "h": 896, "aspect": "4:3", "class": "1K", "family": "SDXL preset", "label": "1152×896 4:3 (SDXL)" },
+    { "w": 1536, "h": 640, "aspect": "12:5", "class": "1K", "family": "SDXL preset", "label": "1536×640 12:5 panoramic (SDXL)" },
+    { "w": 640, "h": 1536, "aspect": "5:12", "class": "1K", "family": "SDXL preset", "label": "640×1536 5:12 vertical (SDXL)" },
+
+    { "w": 1376, "h": 768, "aspect": "16:9", "class": "1K", "family": "Flux / modern diffusion (dev-grid)", "label": "1376×768 ~16:9 (Flux dev-grid, ÷32)" },
+    { "w": 768, "h": 1376, "aspect": "9:16", "class": "1K", "family": "Flux / modern diffusion (dev-grid)", "label": "768×1376 ~9:16 (Flux dev-grid, ÷32)" },
+    { "w": 1408, "h": 768, "aspect": "16:9", "class": "1K", "family": "Flux / modern diffusion (dev-grid)", "label": "1408×768 ~16:9 (Flux dev-grid, ÷32)" },
+    { "w": 768, "h": 1408, "aspect": "9:16", "class": "1K", "family": "Flux / modern diffusion (dev-grid)", "label": "768×1408 ~9:16 (Flux dev-grid, ÷32)" },
+
+    { "w": 1280, "h": 720, "aspect": "16:9", "class": "720p", "family": "Veo / video 720p", "label": "1280×720 16:9 720p (Veo)" },
+    { "w": 1920, "h": 1080, "aspect": "16:9", "class": "1080p", "family": "Veo / video 1080p", "label": "1920×1080 16:9 1080p (Veo)" },
+    { "w": 720, "h": 1280, "aspect": "9:16", "class": "720p", "family": "Veo / video 720p", "label": "720×1280 9:16 720p (Veo)" },
+    { "w": 3840, "h": 2160, "aspect": "16:9", "class": "4K", "family": "Veo / video 4K", "label": "3840×2160 16:9 4K (Veo)" }
+  ]
+}

@@ -1,0 +1,453 @@
+{
+  "generated": "2026-07-12T11:58:31.207Z",
+  "provider": "via OpenRouter · ensemble: [anthropic/claude-sonnet-5, openai/gpt-5.6-luna, google/gemini-3.5-flash] · aggregator: anthropic/claude-sonnet-5 · stage2: agreement-based · payment: DEV MODE (0.35 USDT on X Layer)",
+  "dir": "/home/necokizz/Cuerate OKX AI project/okx ai test",
+  "empty": [],
+  "results": [
+    {
+      "file": "A colossal ice dragon perched atop a jagged, snow-covered mountain peak, breathing a brilliant stream of blue fire into a dark winter sky. Shimmering frost textures, dramatic cinematic lighting, epic fantasy scale. 1080p.png",
+      "original": "A colossal ice dragon perched atop a jagged, snow-covered mountain peak, breathing a brilliant stream of blue fire into a dark winter sky. Shimmering frost textures, dramatic cinematic lighting, epic fantasy scale.",
+      "prompt_source": "filename",
+      "reconstructed": "Epic fantasy digital concept art of a large ice-blue dragon perched on a jagged, snow-covered mountain peak at night, wings spread wide, breathing a powerful stream of bright cyan-blue fire toward the upper right sky, cinematic wide-angle low-angle shot emphasizing monumental scale, diagonal composition with the flame leading the eye to the top right corner, a pale moon partially glowing behind the left wing, layered snowy mountain ranges receding into a dark starry horizon, deep sharp focus on the dragon and foreground rock with atmospheric haze softening the distant peaks, intense glow and bloom radiating from the blue flame casting cool rim light on the dragon's scales and neck, cold high-contrast blue and navy color grading with crushed black shadows, hyper-detailed CGI/digital painting hybrid rendering of dragon scales, ice, and snow textures, no text, moody arctic atmosphere, 16:9 widescreen cinematic key art.",
+      "trust_score": 0.7823529411764705,
+      "trust_method": "agreement",
+      "ensemble_ok": 3,
+      "ensemble_size": 3,
+      "sources": [
+        "anthropic/claude-sonnet-5",
+        "openai/gpt-5.6-luna",
+        "google/gemini-3.5-flash"
+      ],
+      "stage0": {
+        "dims": "1376x768",
+        "ar": "16:9",
+        "grid": "Flux / modern diffusion (dev-grid)",
+        "provenance": "heuristic"
+      },
+      "fields": {
+        "subject_action": {
+          "value": "A large ice-blue dragon perched on a jagged, snow-covered mountain peak, wings spread wide, breathing a powerful stream of bright blue fire/energy toward the upper-right sky.",
+          "confidence": 0.9,
+          "agreement": "All three reports agree on subject, pose, and action."
+        },
+        "composition": {
+          "value": "Wide cinematic landscape composition with the dragon positioned left-of-center to center-left, wings spread filling the mid-to-left frame; a partially obscured moon sits behind the left wing; the flame breath creates a strong diagonal pulling the eye toward the upper-right corner; foreground mountain peak anchors the bottom of the frame with layered snowy mountain ranges receding into a dark starry sky.",
+          "confidence": 0.9,
+          "agreement": "Strong consensus across all three reports on placement, diagonal flow, and background layering."
+        },
+        "camera_language": {
+          "value": "Wide-angle lens, low-to-eye-level angle looking up at the dragon to emphasize monumental scale; cinematic key-art/poster-style framing with a strong diagonal visual flow from wings and flame.",
+          "confidence": 0.8,
+          "agreement": "All three reports independently describe a wide-angle, low/eye-level heroic framing."
+        },
+        "focus_lens_effects": {
+          "value": "Deep, largely sharp focus across the dragon, foreground rocks, and distant mountains, with atmospheric softening/perspective haze in the background rather than true lens bokeh; the blue flame exhibits pronounced glow, bloom, and rim-light effects; no chromatic aberration or shallow depth of field noted.",
+          "confidence": 0.7,
+          "agreement": "Consistent across all reports on deep focus plus glow/bloom from the flame."
+        },
+        "lighting_color_grading": {
+          "value": "Cold, heavily blue/cyan nocturnal color grade; the intense blue fire acts as the dominant light source, casting rim light and glow onto the dragon's head, neck, and scales, with secondary cool moonlight backlighting through the wing; high contrast with deep navy/crushed-black shadows in sky and clouds.",
+          "confidence": 0.9,
+          "agreement": "Very strong agreement across all three reports on cold blue palette and fire as key light source."
+        },
+        "style_medium": {
+          "value": "Highly detailed digital fantasy concept art / cinematic CGI render, blending semi-photorealistic dragon anatomy and scale texture with painterly atmospheric mountains and magical fire effects.",
+          "confidence": 0.7,
+          "agreement": "General agreement on digital fantasy CGI/illustration hybrid; minor variation between 'photorealistic 3D render' and 'painterly digital illustration' phrasing noted."
+        },
+        "text_in_image": {
+          "value": "No readable text or alphanumeric characters visible; one report notes a faint, non-alphanumeric geometric mark in the lower-right background that may be a partially cropped watermark or artifact.",
+          "confidence": 0.6,
+          "agreement": "Two reports find no text at all; one adds an unconfirmed geometric mark — treated as supplementary detail rather than contradiction."
+        },
+        "aspect_ratio_resolution": {
+          "value": "1376×768 (16:9, 1K) — 1376×768 ~16:9 (Flux dev-grid, ÷32)",
+          "confidence": 1,
+          "agreement": "deterministic"
+        },
+        "reference_image_echoes": {
+          "value": "Strong thematic echo of the 'ice dragon' archetype (e.g., Viserion from Game of Thrones) — a pale dragon breathing blue flame over a frozen mountainous landscape.",
+          "confidence": 0.35,
+          "agreement": "Disagreement: two reports found no specific recognizable reference, while one identified a strong thematic pop-culture echo; the more visually specific claim was retained with reduced confidence."
+        },
+        "negative_space_exclusions": {
+          "value": "The scene excludes warm fire tones (no orange/red), maintaining a strictly cold arctic blue/white/navy palette throughout, including background and negative space.",
+          "confidence": 0.4,
+          "agreement": "Only one report offered a specific signal; field confidence capped per methodology regardless of support."
+        },
+        "artifact_fingerprint": {
+          "value": "Consistent evidence across reports points toward diffusion-family generation (Flux/Midjourney-class model): soft/melted wing-to-sky transitions, minor structural ambiguity at wing-shoulder joints, slightly uniform glow patterning in the flame, and a possible small geometric watermark-like artifact in the lower right; none of the reports argue for native-multimodal generation.",
+          "confidence": 0.6,
+          "agreement": "All three reports converge on diffusion-family origin, reinforced by Stage 0 pixel-grid match to Flux dev-grid; no family-level contest present."
+        },
+        "provenance": {
+          "value": "Likely AI-generated fantasy illustration; C2PA/content-credential manifest bytes detected (sniffed, not cryptographically verified) and pixel grid consistent with Flux-family diffusion output, aligning with all three reports' independent assessment of AI generation.",
+          "confidence": 0.65,
+          "agreement": "heuristic"
+        }
+      },
+      "timing_ms": {
+        "stage0": 14,
+        "stage1": 65254,
+        "stage2": 0,
+        "total": 65268
+      }
+    },
+    {
+      "file": "A futuristic hover-car racing millimeters above a desert canyon riverbed. The vehicle kicks up a massive spray of water and dust, backlit by an intense, fiery sunset. Dynamic wide shot, high-octane energy. 1080p.png",
+      "original": "A futuristic hover-car racing millimeters above a desert canyon riverbed. The vehicle kicks up a massive spray of water and dust, backlit by an intense, fiery sunset. Dynamic wide shot, high-octane energy.",
+      "prompt_source": "filename",
+      "reconstructed": "Photorealistic 3D-rendered cinematic concept art of a futuristic jet-powered racing car with a dark carbon-fiber body and glowing blue neon accent lines, speeding low through a rugged, muddy canyon riverbed, kicking up a massive spray of muddy water and dust to its side, twin rear rocket-thruster pods blasting bright orange-yellow flame alongside blue-glowing jet exhaust, car marked with '07' on the hood, '#07' on the side, 'ORBITAL RAGING' on the rear wing, and 'BLAZE-X' on the side panel, shot from a low-angle wide-angle tracking camera close to the ground to convey high speed with motion blur streaking across the canyon walls and rocky debris, dramatic golden-hour sunset lighting with saturated orange-amber tones contrasted by cool cyan-blue vehicle lighting, high dynamic range with glowing highlights on dust and flame, deep shadowed canyon walls framing both sides of the frame, sharp focus on the vehicle with cinematic bloom and glow, rugged natural terrain with no paved track, widescreen 16:9 automotive/video-game key art aesthetic.",
+      "trust_score": 0.780392156862745,
+      "trust_method": "agreement",
+      "ensemble_ok": 3,
+      "ensemble_size": 3,
+      "sources": [
+        "anthropic/claude-sonnet-5",
+        "openai/gpt-5.6-luna",
+        "google/gemini-3.5-flash"
+      ],
+      "stage0": {
+        "dims": "1408x768",
+        "ar": "16:9",
+        "grid": "Flux / modern diffusion (dev-grid)",
+        "provenance": "heuristic"
+      },
+      "fields": {
+        "subject_action": {
+          "value": "A futuristic jet-powered racing car with a dark carbon-fiber body and glowing blue neon accent lines speeds through a rugged canyon riverbed, kicking up a massive spray of muddy water/dust to its side while twin rear rocket-thruster pods emit bright orange-yellow flame and blue-glowing jet exhaust.",
+          "confidence": 0.9,
+          "agreement": "strong (3/3 agree on subject, vehicle design, and action)"
+        },
+        "composition": {
+          "value": "Wide, low-angle dynamic action composition with the car positioned toward the lower-right/center-foreground, high canyon walls symmetrically framing both sides, and a sunset/vanishing point in the background creating a strong central focal draw; dust and exhaust create diagonal motion lines through the frame.",
+          "confidence": 0.75,
+          "agreement": "moderate (3/3 agree on canyon-framing and sunset vanishing point; minor disagreement on exact car placement — left-of-center vs lower-right foreground)"
+        },
+        "camera_language": {
+          "value": "Low-angle, near-ground tracking/chase-camera perspective using a wide-angle lens to capture both vehicle and canyon walls, with motion-oriented framing implying high speed.",
+          "confidence": 0.8,
+          "agreement": "strong (3/3 agree)"
+        },
+        "focus_lens_effects": {
+          "value": "Sharp focus on the vehicle with motion blur on canyon walls, rocks, and debris; bloom/glow highlights on exhaust flames and dust spray; mild depth-of-field softening in the background; overall hyper-clarity CGI-style rendering rather than true optical falloff.",
+          "confidence": 0.7,
+          "agreement": "strong (3/3 agree on sharp vehicle focus plus motion blur/glow effects)"
+        },
+        "lighting_color_grading": {
+          "value": "Dramatic golden-hour/sunset backlighting with saturated orange-amber tones and deep shadowed canyon rock, contrasted by cool cyan-blue vehicle lighting and exhaust accents; high dynamic range with glowing highlights.",
+          "confidence": 0.9,
+          "agreement": "strong (3/3 agree)"
+        },
+        "style_medium": {
+          "value": "Photorealistic digital 3D-rendered concept art / cinematic key art, typical of automotive or futuristic racing-game promotional visualization.",
+          "confidence": 0.7,
+          "agreement": "strong (3/3 agree)"
+        },
+        "text_in_image": {
+          "value": "'07' on the hood, '#07' on the side, 'BLAZE-X' on the side panel/rear wing, and a rear-wing/side-pod label read as 'ORBITAL RAGING' by two reports and 'ORBITAL RACING' by one; additional small text blocks near the side number are garbled/illegible across all reports.",
+          "confidence": 0.65,
+          "agreement": "mostly agree, with a disagreement on the exact wording of the third logo (RAGING vs RACING) — majority (2/3) support 'RAGING'"
+        },
+        "aspect_ratio_resolution": {
+          "value": "1408×768 (16:9, 1K) — 1408×768 ~16:9 (Flux dev-grid, ÷32)",
+          "confidence": 1,
+          "agreement": "deterministic"
+        },
+        "reference_image_echoes": {
+          "value": "No recognizable real-world vehicle, person, or branded model; design reads as an original fictional concept, though it evokes the visual language of futuristic racing-game franchises (e.g., Wipeout, Trackmania, Ridge Racer).",
+          "confidence": 0.6,
+          "agreement": "partial (2/3 confirm no real-world reference; only 1/3 specifies the racing-game echo, but it is not contradicted)"
+        },
+        "negative_space_exclusions": {
+          "value": "Scene notably excludes clean asphalt or standard modern racetrack elements — the environment is strictly natural, rugged, and muddy rather than a conventional racing surface.",
+          "confidence": 0.4,
+          "agreement": "single-signal (1/3 reported this; other two logged no strong signal, treated as non-votes)"
+        },
+        "artifact_fingerprint": {
+          "value": "Diffusion-family generative tells present across all reports: largely coherent vehicle geometry and mostly-legible primary logos, but with minor garbling on small secondary text, soft/melting edges on dust and flame plumes, and a small sparkle/diamond-shaped mark near the lower-right corner resembling a generative-platform watermark. Consistent with a high-fidelity diffusion model (e.g., FLUX/Midjourney-class).",
+          "confidence": 0.6,
+          "agreement": "strong (3/3 lean diffusion-family, reinforced by Stage 0 Flux dev-grid pixel match; no native-multimodal reading was reported, so not contested)"
+        },
+        "provenance": {
+          "value": "Likely diffusion-based AI-generated image. C2PA/content-credentials manifest bytes were sniffed (not cryptographically verified), and the pixel grid matches a Flux-style dev-grid (÷32) spacing consistent with modern diffusion output; a small watermark-like icon near the lower-right corner further supports an AI-generation platform origin.",
+          "confidence": 0.7,
+          "agreement": "heuristic"
+        }
+      },
+      "timing_ms": {
+        "stage0": 3,
+        "stage1": 66481,
+        "stage2": 0,
+        "total": 66484
+      }
+    },
+    {
+      "file": "A lively, bustling street in Tokyo under a sudden midnight downpour. Pedestrians with glowing LED umbrellas walk past towering, animated holographic billboards. Rich reflections on the wet asphalt, cinematic depth of field. 9.png",
+      "original": "A lively, bustling street in Tokyo under a sudden midnight downpour. Pedestrians with glowing LED umbrellas walk past towering, animated holographic billboards. Rich reflections on the wet asphalt, cinematic depth of field. 9:16",
+      "prompt_source": "sidecar",
+      "reconstructed": "Vertical 9:16 photorealistic night scene of a rain-soaked Shibuya-style Japanese city intersection, dense crowd of pedestrians walking toward camera carrying multicolored and LED-rimmed umbrellas, taxis and cars idling in the street, centered street-canyon composition with a cylindrical tower anchoring the background and tall illuminated neon billboards flanking both sides, saturated neon signage in red, pink, blue, cyan, and green reflecting off wet asphalt, legible Japanese text on signs reading 渋谷 SHIBUYA, 東京ゲーム, ラーメン, NEO TOKYO, 24時間, UC, fine vertical rain streaks, deep focus with slight atmospheric softness in the distance, cinematic neon-noir color grading, cool tones balanced by warm street lighting, densely packed urban frame with no visible sky, documentary street-photography aesthetic with anime-style billboard advertisement in the background.",
+      "trust_score": 0.7578431372549019,
+      "trust_method": "agreement",
+      "ensemble_ok": 3,
+      "ensemble_size": 3,
+      "sources": [
+        "anthropic/claude-sonnet-5",
+        "openai/gpt-5.6-luna",
+        "google/gemini-3.5-flash"
+      ],
+      "stage0": {
+        "dims": "768x1376",
+        "ar": "9:16",
+        "grid": "Flux / modern diffusion (dev-grid)",
+        "provenance": "heuristic"
+      },
+      "fields": {
+        "subject_action": {
+          "value": "A dense crowd of pedestrians walks toward/through a rain-soaked commercial intersection at night, most carrying multicolored (some LED-rimmed or transparent) umbrellas, while cars and taxis idle in the street.",
+          "confidence": 0.9,
+          "agreement": "All three reports agree on crowd, umbrellas, rain, night setting, and vehicles."
+        },
+        "composition": {
+          "value": "Vertical/portrait framing, centered street-canyon composition with a strong central vanishing point; a cylindrical tower anchors the middle distance, tall illuminated signage flanks both sides, and a dense mass of umbrellas/pedestrians fills the lower frame.",
+          "confidence": 0.9,
+          "agreement": "Strong consensus across all three reports on symmetry, central tower, and layered depth."
+        },
+        "camera_language": {
+          "value": "Street-level to slightly elevated vantage point, likely wide-to-moderate field of view, deep perspective down the urban canyon, documentary night-photography feel.",
+          "confidence": 0.55,
+          "agreement": "2 of 3 reports describe a wide-angle/elevated street-level view; 1 report described telephoto compression instead — noted disagreement, majority version used."
+        },
+        "focus_lens_effects": {
+          "value": "Deep, broad depth of field with most planes reasonably sharp; fine vertical rain streaks rendered clearly; wet-pavement reflections and slight atmospheric/distance softness on far figures and signage.",
+          "confidence": 0.7,
+          "agreement": "All three reports agree on deep focus, rain-streak rendering, and wet reflections; minor variance on bokeh vs. full sharpness."
+        },
+        "lighting_color_grading": {
+          "value": "High-contrast night scene with saturated neon signage (reds, pinks, blues, cyans, greens) reflecting across wet asphalt; cool overall tone offset by warm street lighting, cinematic neon-noir grade.",
+          "confidence": 0.9,
+          "agreement": "Strong agreement across all three reports."
+        },
+        "style_medium": {
+          "value": "Photorealistic digital image simulating a high-resolution night photograph of a Shibuya-style Japanese street scene, likely AI-generated or heavily digitally enhanced rather than a straight photograph.",
+          "confidence": 0.55,
+          "agreement": "2 of 3 reports lean toward AI-generated/photorealistic digital image; 1 report leaned toward a real photograph with possible enhancement — noted disagreement."
+        },
+        "text_in_image": {
+          "value": "渋谷 / SHIBUYA, 東京ゲーム, ラーメン, NEO TOKYO, 24時間, UC, plus additional smaller/partially legible Japanese signage text, some showing minor garbling on peripheral signs.",
+          "confidence": 0.85,
+          "agreement": "Core text strings confirmed by all three reports; minor variant transcriptions on smaller peripheral text."
+        },
+        "aspect_ratio_resolution": {
+          "value": "768×1376 (9:16, 1K) — 768×1376 ~9:16 (Flux dev-grid, ÷32)",
+          "confidence": 1,
+          "agreement": "deterministic"
+        },
+        "reference_image_echoes": {
+          "value": "Strongly evokes the well-known Shibuya Crossing aesthetic (Tokyo), including anime-style billboard figures used as in-scene signage rather than identifiable reference-image echoes of a real person or character.",
+          "confidence": 0.6,
+          "agreement": "All three reports converge on this reading."
+        },
+        "negative_space_exclusions": {
+          "value": "No visible open sky or negative space; frame is entirely filled with dense architecture, signage, rain, and crowd.",
+          "confidence": 0.4,
+          "agreement": "Only one report offered a positive signal (no open sky/dense framing); other two reported no strong signal, treated as non-votes. Capped per schema rule."
+        },
+        "artifact_fingerprint": {
+          "value": "Contested: readings diverge between diffusion-family generation (small-text garbling, soft/melted sign borders, ambiguous limb blending on overlapping figures) and native-multimodal generation (exceptionally clear, correctly-stroked Japanese text on major signage such as \"渋谷\", with only minor garbling on peripheral signs). Overall composition is highly coherent multi-subject scene regardless of family.",
+          "confidence": 0.35,
+          "agreement": "contested — reports split between diffusion-family and native-multimodal generation signatures"
+        },
+        "provenance": {
+          "value": "C2PA/content-credentials manifest bytes detected (sniff-level, not cryptographically verified); pixel grid matches Flux/diffusion dev-grid pattern (768×1376), raising prior toward diffusion-family origin, but model-level stylistic impressions remain heuristic.",
+          "confidence": 0.6,
+          "agreement": "heuristic"
+        }
+      },
+      "timing_ms": {
+        "stage0": 2,
+        "stage1": 62146,
+        "stage2": 0,
+        "total": 62149
+      }
+    },
+    {
+      "file": "A lone astronaut standing at the edge of a shocking, vibrant blue water oasis discovered inside a massive red Martian canyon. Dramatic golden hour sunlight cutting across the rust-colored landscape, epic scale, cinematic sci-.png",
+      "original": "A lone astronaut standing at the edge of a shocking, vibrant blue water oasis discovered inside a massive red Martian canyon. Dramatic golden hour sunlight cutting across the rust-colored landscape, epic scale, cinematic sci-fi.",
+      "prompt_source": "sidecar",
+      "reconstructed": "Cinematic photorealistic sci-fi concept art, wide-angle establishing shot of a lone astronaut in a white spacesuit standing on a rocky ledge, helmet removed and held at their side, gazing down into a vast red-rock canyon toward a vivid turquoise-blue oasis pool, a small Mars-style rover parked near the water's edge in the middle distance, two pale moons visible in a dusky orange sky, a stone-paved path winding down toward the water, layered sandstone canyon walls in warm ochre and terracotta tones receding into the background, dramatic low-angle golden-hour sunlight from the upper left casting long shadows and crepuscular god rays through atmospheric haze, high contrast between warm rock hues and cool saturated cyan-turquoise water, deep blue-to-amber sky gradient, deep focus with crisp detail throughout, elevated high-angle vantage point, hyper-realistic painterly digital render, no legible text, 16:9 widescreen aspect ratio, 1408x768 resolution.",
+      "trust_score": 0.7941176470588235,
+      "trust_method": "agreement",
+      "ensemble_ok": 3,
+      "ensemble_size": 3,
+      "sources": [
+        "anthropic/claude-sonnet-5",
+        "openai/gpt-5.6-luna",
+        "google/gemini-3.5-flash"
+      ],
+      "stage0": {
+        "dims": "1408x768",
+        "ar": "16:9",
+        "grid": "Flux / modern diffusion (dev-grid)",
+        "provenance": "heuristic"
+      },
+      "fields": {
+        "subject_action": {
+          "value": "A lone astronaut in a white spacesuit stands on a rocky ledge, helmet removed and held at their side, gazing down into a vast red-rock canyon at a vivid turquoise-blue oasis pool; a small Mars-style rover is parked near the water's edge in the middle distance, with two pale moons visible in the sky.",
+          "confidence": 0.95,
+          "agreement": "strong consensus across all 3 reports"
+        },
+        "composition": {
+          "value": "Wide establishing landscape shot; astronaut placed in the lower-right foreground as a scale figure, turquoise pool forms a bright central/diagonal focal point, a stone-paved path winds from the foreground down toward the water, layered canyon walls frame the scene and recede into the background with the horizon in the upper-middle of the frame.",
+          "confidence": 0.95,
+          "agreement": "strong consensus across all 3 reports"
+        },
+        "camera_language": {
+          "value": "Cinematic wide-angle environmental/establishing shot from an elevated, high-angle vantage point looking down into the canyon basin, with strong foreground-to-background depth and the astronaut used as a scale reference.",
+          "confidence": 0.8,
+          "agreement": "strong consensus across all 3 reports"
+        },
+        "focus_lens_effects": {
+          "value": "Deep focus throughout — foreground astronaut, midground pool/rover, and background cliffs all rendered sharply with crisp detail; no shallow depth-of-field or artificial bokeh, mild atmospheric haze softening distant elements.",
+          "confidence": 0.7,
+          "agreement": "strong consensus across all 3 reports"
+        },
+        "lighting_color_grading": {
+          "value": "Dramatic low-angle warm golden-hour sunlight from the upper left, producing long shadows and crepuscular 'god rays' through atmospheric haze; high contrast between warm ochre/terracotta/amber rock tones and cool saturated cyan-turquoise water, with a deep blue-to-amber sky gradient.",
+          "confidence": 0.95,
+          "agreement": "strong consensus across all 3 reports"
+        },
+        "style_medium": {
+          "value": "Photorealistic digital render / cinematic sci-fi concept art, painterly-realistic rendering of an alien or Mars-like environment.",
+          "confidence": 0.7,
+          "agreement": "strong consensus across all 3 reports"
+        },
+        "text_in_image": {
+          "value": "No clearly legible text. Minor unconfirmed markings noted inconsistently: one report noted a small sparkle-like icon in the bottom right possibly resembling a watermark, another noted an indistinct symbol on the astronaut's backpack; neither could be transcribed.",
+          "confidence": 0.5,
+          "agreement": "partial disagreement — two reports found no text, two noted unconfirmed minor marks"
+        },
+        "aspect_ratio_resolution": {
+          "value": "1408×768 (16:9, 1K) — 1408×768 ~16:9 (Flux dev-grid, ÷32)",
+          "confidence": 1,
+          "agreement": "deterministic"
+        },
+        "reference_image_echoes": {
+          "value": "Possible echo of classic NASA Mars-exploration concept imagery (astronaut + rover) blended with a fantastical oasis/sci-fi setting; no specific recognizable person, character, or branded object identified.",
+          "confidence": 0.4,
+          "agreement": "only 1 of 3 reports gave an affirmative signal; other 2 reported no strong evidence (non-votes, not contradiction)"
+        },
+        "negative_space_exclusions": {
+          "value": "Despite the implied exploration narrative, no footprints trail to the rover, no other astronauts are present, and no habitat/base structure is visible.",
+          "confidence": 0.4,
+          "agreement": "only 1 of 3 reports offered a specific signal; capped per field rules"
+        },
+        "artifact_fingerprint": {
+          "value": "Multiple diffusion-family tells noted consistently: repetitive/tiling striations in cliff rock, unnaturally regular stone 'staircase' geometry, melting/indistinct rock textures near the water's edge, and simplified/fused geometry on the distant rover; small equipment details (gloves, markings) render soft or ambiguous. All three reports converge on diffusion-model origin (e.g., Flux/Midjourney-class) rather than native-multimodal generation; no contested claims of native-multimodal origin were raised.",
+          "confidence": 0.6,
+          "agreement": "consensus across all 3 reports toward diffusion-family generation"
+        },
+        "provenance": {
+          "value": "Heuristic signal only: C2PA/content-credentials manifest bytes detected via sniff (not cryptographically verified); PNG format; pixel grid matches Flux/diffusion dev-grid (1408×768, ÷32), raising prior for diffusion-family origin but not confirming a specific tool.",
+          "confidence": 0.55,
+          "agreement": "heuristic"
+        }
+      },
+      "timing_ms": {
+        "stage0": 3,
+        "stage1": 63286,
+        "stage2": 0,
+        "total": 63289
+      }
+    },
+    {
+      "file": "A majestic phoenix bursting into life out of a swirling nebula of colorful cosmic dust. Brilliant golds, deep purples, and fiery reds clash as its wings create a shockwave of light across the starry void. High fantasy, epic s.png",
+      "original": "A majestic phoenix bursting into life out of a swirling nebula of colorful cosmic dust. Brilliant golds, deep purples, and fiery reds clash as its wings create a shockwave of light across the starry void. High fantasy, epic scale.",
+      "prompt_source": "sidecar",
+      "reconstructed": "A mythical phoenix engulfed in fiery golden-orange and red plumage, wings fully spread, soaring upward through deep space with head raised and long flame-like tail feathers trailing downward and shedding embers, centered symmetrically within a brilliant glowing circular halo of light, radiant bloom and radial light-ray streaks emanating outward through a dense cosmic nebula, swirling blue-violet, magenta, and teal star clouds filling the background with scattered stars and distant galaxies, high-contrast complementary orange-teal color grading, painterly digital fantasy illustration, concept-art / matte-painting style, wide 16:9 poster composition, no camera distortion, sharp detailed feather rendering, small four-point sparkle watermark icon subtly visible in the lower-right corner, no other text.",
+      "trust_score": 0.7999999999999999,
+      "trust_method": "agreement",
+      "ensemble_ok": 3,
+      "ensemble_size": 3,
+      "sources": [
+        "anthropic/claude-sonnet-5",
+        "openai/gpt-5.6-luna",
+        "google/gemini-3.5-flash"
+      ],
+      "stage0": {
+        "dims": "1408x768",
+        "ar": "16:9",
+        "grid": "Flux / modern diffusion (dev-grid)",
+        "provenance": "heuristic"
+      },
+      "fields": {
+        "subject_action": {
+          "value": "A mythical phoenix, fully engulfed in fiery golden-orange plumage, soaring/hovering with wings fully spread and head raised, long flame-like tail feathers trailing downward with embers/sparks dispersing off the tips, set against a cosmic backdrop.",
+          "confidence": 0.9,
+          "agreement": "3/3 reports agree on subject, pose, and fiery phoenix motif"
+        },
+        "composition": {
+          "value": "Centrally placed, symmetrical phoenix with wings spanning nearly the full frame width, backed by a large glowing circular halo/energy ring acting as a compositional anchor, set within a dense field of stars, nebula clouds, and distant galaxies filling the background.",
+          "confidence": 0.9,
+          "agreement": "3/3 reports agree"
+        },
+        "camera_language": {
+          "value": "No literal camera or ground plane implied; rendered as a wide, frontal, poster/establishing-shot style illustration with the subject centered and dramatically framed against a vast cosmic scene.",
+          "confidence": 0.8,
+          "agreement": "3/3 reports agree in substance"
+        },
+        "focus_lens_effects": {
+          "value": "Strong bloom/glow around the phoenix and halo, radial light streaks/flare emanating outward through the nebula; phoenix rendered in crisp detail with little to no true photographic depth-of-field blur, consistent with painterly/simulated lighting rather than a real lens.",
+          "confidence": 0.7,
+          "agreement": "3/3 reports agree"
+        },
+        "lighting_color_grading": {
+          "value": "High-contrast, highly saturated complementary color grading: warm golden/orange/red light emanating from the phoenix as the primary source, against cool deep blue-violet, magenta, and teal nebula clouds and black space; luminous bloom and dramatic fantasy-style grading throughout.",
+          "confidence": 0.9,
+          "agreement": "3/3 reports agree"
+        },
+        "style_medium": {
+          "value": "Highly detailed digital fantasy illustration / concept-art style, painterly airbrushed rendering combining mythological creature design with cosmic nebula imagery; not photographic.",
+          "confidence": 0.7,
+          "agreement": "3/3 reports agree"
+        },
+        "text_in_image": {
+          "value": "No rendered text; a small four-pointed sparkle/star-shaped mark is visible in the lower-right corner, likely a UI watermark or overlay artifact rather than part of the artwork.",
+          "confidence": 0.85,
+          "agreement": "3/3 reports independently noted the same watermark-like mark"
+        },
+        "aspect_ratio_resolution": {
+          "value": "1408×768 (16:9, 1K) — 1408×768 ~16:9 (Flux dev-grid, ÷32)",
+          "confidence": 1,
+          "agreement": "deterministic"
+        },
+        "reference_image_echoes": {
+          "value": "No specific named character, person, or branded object is echoed; the phoenix follows the generic classical mythological archetype of a phoenix rising, reimagined in a cosmic setting.",
+          "confidence": 0.35,
+          "agreement": "Only 1/3 reports offered a signal (archetype echo); other two reported no strong signal (non-votes)"
+        },
+        "negative_space_exclusions": {
+          "value": "No empty or negative space; background is densely filled with nebula clouds, stellar dust, and stars, leaving no implied missing or excluded region.",
+          "confidence": 0.4,
+          "agreement": "Only 1/3 reports gave an explicit signal; capped per schema rule regardless of agreement"
+        },
+        "artifact_fingerprint": {
+          "value": "Feather and light-ray structures show repetition, soft blending/fusion at wingtip-nebula transitions, and uniform tiled quality in radiating light rays — consistent with diffusion-model generation tendencies (e.g., Midjourney/Flux-style fantasy art) rather than crisp native-multimodal rendering.",
+          "confidence": 0.6,
+          "agreement": "3/3 reports converge on diffusion-family fingerprint (no cross-family contest observed)"
+        },
+        "provenance": {
+          "value": "Likely AI-generated fantasy artwork; C2PA/content-credential manifest bytes detected via sniff (not cryptographically verified), and pixel grid matches a Flux-style diffusion dev-grid (÷32), raising the prior toward diffusion-family generation.",
+          "confidence": 0.6,
+          "agreement": "heuristic"
+        }
+      },
+      "timing_ms": {
+        "stage0": 2,
+        "stage1": 64022,
+        "stage2": 0,
+        "total": 64024
+      }
+    }
+  ]
+}

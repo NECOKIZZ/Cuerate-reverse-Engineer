@@ -1,0 +1,33 @@
+{
+  "name": "cuerate-re-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Image Reverse-Engineer Agent — agent-callable, pay-per-call image-to-prompt service for the OKX.AI marketplace (Cuerate flywheel).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "prebuild": "rm -rf dist",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/server.js",
+    "dev": "tsx watch src/server.ts",
+    "server": "tsx src/server.ts",
+    "mcp": "tsx src/mcp.ts",
+    "demo": "tsx demo/buyer-agent.ts",
+    "test:stage0": "tsx test/stage0.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.24.1",
+    "dotenv": "^16.4.7",
+    "exifr": "^7.1.3",
+    "fastify": "^5.2.0",
+    "sharp": "^0.34.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
