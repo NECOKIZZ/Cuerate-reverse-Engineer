@@ -75,6 +75,28 @@ export const config = {
     payTo: process.env.PAYMENT_ADDRESS || "0xYOUR_OKX_AGENTIC_WALLET_ADDRESS",
     devMode: bool(process.env.PAYMENT_DEV_MODE, true),
     devToken: process.env.PAYMENT_DEV_TOKEN || "dev-okx-demo-token",
+
+    // ── Live x402 settlement (only used when devMode=false) ───────────────────
+    // The x402 network id OKX expects (NOT the human "X Layer" label above).
+    network: process.env.PAYMENT_NETWORK || "xlayer",
+    // ERC-20 contract of the payout asset on that network (USDT on X Layer).
+    // Required for live mode — the facilitator matches the signed transfer against it.
+    assetAddress: process.env.PAYMENT_ASSET_ADDRESS || "",
+    // Token decimals — USDT/USDC are 6. Used to convert priceUsd → atomic units.
+    assetDecimals: Math.trunc(num(process.env.PAYMENT_ASSET_DECIMALS, 6)),
+    // How long a returned 402 quote stays payable, in seconds.
+    maxTimeoutSeconds: Math.trunc(num(process.env.PAYMENT_MAX_TIMEOUT_SECONDS, 300)),
+  },
+
+  // ── OKX facilitator (x402 verify/settle) ────────────────────────────────────
+  // API credentials for the OKX x402 facilitator. Required only in live payment mode.
+  // These are OKX API keys (from your OKX API console) — NOT the wallet, NOT OpenRouter.
+  // https://web3.okx.com/onchainos/dev-docs/payments
+  okx: {
+    apiKey: process.env.OKX_API_KEY || "",
+    apiSecret: process.env.OKX_API_SECRET || "",
+    passphrase: process.env.OKX_API_PASSPHRASE || "",
+    baseURL: (process.env.OKX_API_BASE_URL || "https://web3.okx.com").replace(/\/+$/, ""),
   },
 
   // ── Server ──────────────────────────────────────────────────────────────────
@@ -84,6 +106,21 @@ export const config = {
   cuerateSeedThreshold: num(process.env.CUERATE_SEED_THRESHOLD, 0.55),
 } as const;
 
+/**
+ * True when everything the live x402 facilitator path needs is present. Used to fail fast
+ * on boot if PAYMENT_DEV_MODE=false but the OKX credentials / asset details are missing —
+ * otherwise every paid call would 402 with no way for a caller to succeed.
+ */
+export function paymentLiveConfigured(): { ok: boolean; missing: string[] } {
+  const missing: string[] = [];
+  if (!config.okx.apiKey) missing.push("OKX_API_KEY");
+  if (!config.okx.apiSecret) missing.push("OKX_API_SECRET");
+  if (!config.okx.passphrase) missing.push("OKX_API_PASSPHRASE");
+  if (!config.payment.assetAddress) missing.push("PAYMENT_ASSET_ADDRESS");
+  if (!/^0x[a-fA-F0-9]{40}$/.test(config.payment.payTo)) missing.push("PAYMENT_ADDRESS");
+  return { ok: missing.length === 0, missing };
+}
+
 export function assertConfigured(): void {
   if (config.mockLlm) return; // mock mode needs no key
   if (!config.openrouter.apiKey) {
@@ -92,6 +129,17 @@ export function assertConfigured(): void {
         "(get one at https://openrouter.ai/keys) — or set MOCK_LLM=true to run offline. " +
         "This is the ONLY key you need.",
     );
+  }
+  // Live payment mode needs the facilitator wired — refuse to boot half-configured so we
+  // never advertise a paid endpoint that can't actually accept a payment.
+  if (!config.payment.devMode) {
+    const live = paymentLiveConfigured();
+    if (!live.ok) {
+      throw new Error(
+        `PAYMENT_DEV_MODE=false (live settlement) but these are missing: ${live.missing.join(", ")}. ` +
+          "Set them in the environment, or set PAYMENT_DEV_MODE=true for local/demo runs.",
+      );
+    }
   }
 }
 
@@ -105,10 +153,15 @@ export function providerSummary(): string {
   const stage2 = config.imageGen.enabled
     ? `regenerate-verified (${config.imageGen.model})`
     : "agreement-based";
+  const payMode = config.payment.devMode
+    ? "DEV MODE"
+    : paymentLiveConfigured().ok
+      ? "LIVE (OKX facilitator)"
+      : "LIVE ⚠️ misconfigured";
   return (
     `via OpenRouter · ensemble: [${config.ensembleModels.join(", ")}] · ` +
     `aggregator: ${config.aggregatorModel} · stage2: ${stage2} · ` +
-    `payment: ${config.payment.devMode ? "DEV MODE" : "LIVE"} ` +
+    `payment: ${payMode} ` +
     `(${config.payment.priceUsd} ${config.payment.asset} on ${config.payment.chain})`
   );
 }

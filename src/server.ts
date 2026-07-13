@@ -80,7 +80,7 @@ export function buildServer() {
   // ── PAID full pipeline (402-gated) ───────────────────────────────────────────
   app.post<{ Body: ImageBody }>("/reverse-engineer", async (req, reply) => {
     const paymentHeader = req.headers["x-payment"] as string | undefined;
-    const check = await verifyPayment(paymentHeader);
+    const check = await verifyPayment(paymentHeader, "/reverse-engineer");
     if (!check.ok) {
       reply.code(402);
       reply.header("accept-payment", "x402");
