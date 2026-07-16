@@ -12,7 +12,7 @@ import Fastify from "fastify";
 import { config, assertConfigured, providerSummary, VERSION } from "./config.js";
 import { identify } from "./stage0/identify.js";
 import { reverseEngineer } from "./pipeline.js";
-import { buildRequirements, verifyPayment } from "./payment/x402.js";
+import { buildRequirements, paymentRequiredHeader, verifyPayment } from "./payment/x402.js";
 import { fetchImageBuffer } from "./util.js";
 
 interface ImageBody {
@@ -79,10 +79,18 @@ export function buildServer() {
 
   // ── PAID full pipeline (402-gated) ───────────────────────────────────────────
   app.post<{ Body: ImageBody }>("/reverse-engineer", async (req, reply) => {
-    const paymentHeader = req.headers["x-payment"] as string | undefined;
+    // x402 payment proof: `X-Payment` (v1) or `PAYMENT-SIGNATURE` (v2 clients).
+    const paymentHeader = (req.headers["x-payment"] ?? req.headers["payment-signature"]) as
+      | string
+      | undefined;
     const check = await verifyPayment(paymentHeader, "/reverse-engineer");
     if (!check.ok) {
+      // x402 challenge: the PAYMENT-REQUIRED header carries the base64 JSON
+      // {x402Version, resource, accepts:[{scheme, network, asset, amount, payTo, ...}]}
+      // that a paying agent decodes, signs, and retries with. Body mirrors it in
+      // plain JSON for humans/debuggers.
       reply.code(402);
+      reply.header("PAYMENT-REQUIRED", paymentRequiredHeader("/reverse-engineer"));
       reply.header("accept-payment", "x402");
       return buildRequirements("/reverse-engineer");
     }

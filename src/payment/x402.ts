@@ -29,7 +29,8 @@ const X402_SCHEME = "aggr_deferred";
 export interface X402Requirements {
   scheme: string;
   network: string;
-  maxAmountRequired: string; // atomic units of `asset`, e.g. "350000" for 0.35 USDT (6 dp)
+  amount: string; // atomic units of `asset`, e.g. "350000" for 0.35 USDT (6 dp)
+  maxAmountRequired: string; // same value — kept for x402-v1 clients that read this name
   resource: string;
   description: string;
   mimeType: string;
@@ -39,9 +40,10 @@ export interface X402Requirements {
   extra: Record<string, unknown>;
 }
 
-/** The full 402 body advertised to unpaid callers. */
+/** The full 402 challenge advertised to unpaid callers (body + PAYMENT-REQUIRED header). */
 export interface PaymentRequirements {
   x402Version: number;
+  resource: string;
   error: string;
   accepts: X402Requirements[];
 }
@@ -63,10 +65,12 @@ function toAtomic(amount: number, decimals: number): string {
  * verify, and the amount/payTo can never be undercut by a client-supplied value.
  */
 export function x402Requirements(resource: string): X402Requirements {
+  const amount = toAtomic(config.payment.priceUsd, config.payment.assetDecimals);
   return {
     scheme: X402_SCHEME,
     network: config.payment.network,
-    maxAmountRequired: toAtomic(config.payment.priceUsd, config.payment.assetDecimals),
+    amount,
+    maxAmountRequired: amount,
     resource,
     description:
       "Cuerate Lens — one full Prompt Reverse-Engineer call " +
@@ -76,17 +80,27 @@ export function x402Requirements(resource: string): X402Requirements {
     maxTimeoutSeconds: config.payment.maxTimeoutSeconds,
     asset: config.payment.assetAddress,
     // sessionCert lives on the buyer's paymentPayload.accepted.extra — NOT here.
-    extra: { name: config.payment.asset },
+    extra: { name: config.payment.asset, version: "1" },
   };
 }
 
-/** Build the 402 body advertised to unpaid callers. */
+/** Build the 402 challenge advertised to unpaid callers. */
 export function buildRequirements(resource: string): PaymentRequirements {
   return {
     x402Version: X402_VERSION,
+    resource,
     error: "payment required",
     accepts: [x402Requirements(resource)],
   };
+}
+
+/**
+ * The `PAYMENT-REQUIRED` header value: base64 of the JSON challenge. This is what an
+ * x402 client (e.g. the OKX Agentic Wallet / onchainos CLI) decodes to learn how to
+ * pay — asset, amount, payTo, network, scheme — sign, and retry.
+ */
+export function paymentRequiredHeader(resource: string): string {
+  return Buffer.from(JSON.stringify(buildRequirements(resource)), "utf8").toString("base64");
 }
 
 export interface PaymentCheck {

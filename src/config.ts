@@ -80,8 +80,11 @@ export const config = {
     // The x402 network id OKX expects (NOT the human "X Layer" label above).
     network: process.env.PAYMENT_NETWORK || "xlayer",
     // ERC-20 contract of the payout asset on that network (USDT on X Layer).
-    // Required for live mode — the facilitator matches the signed transfer against it.
-    assetAddress: process.env.PAYMENT_ASSET_ADDRESS || "",
+    // The facilitator matches the signed transfer against it, and the 402 challenge
+    // advertises it — so it must ALWAYS be a real contract, even in dev mode.
+    // Default verified on-chain (rpc.xlayer.tech): symbol=USDT, decimals=6.
+    assetAddress:
+      process.env.PAYMENT_ASSET_ADDRESS || "0x1E4a5963aBFD975d8c9021ce480b42188849D41d",
     // Token decimals — USDT/USDC are 6. Used to convert priceUsd → atomic units.
     assetDecimals: Math.trunc(num(process.env.PAYMENT_ASSET_DECIMALS, 6)),
     // How long a returned 402 quote stays payable, in seconds.
