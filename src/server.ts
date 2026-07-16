@@ -78,32 +78,44 @@ export function buildServer() {
   });
 
   // ── PAID full pipeline (402-gated) ───────────────────────────────────────────
-  app.post<{ Body: ImageBody }>("/reverse-engineer", async (req, reply) => {
-    // x402 payment proof: `X-Payment` (v1) or `PAYMENT-SIGNATURE` (v2 clients).
-    const paymentHeader = (req.headers["x-payment"] ?? req.headers["payment-signature"]) as
-      | string
-      | undefined;
-    const check = await verifyPayment(paymentHeader, "/reverse-engineer");
-    if (!check.ok) {
-      // x402 challenge: the PAYMENT-REQUIRED header carries the base64 JSON
-      // {x402Version, resource, accepts:[{scheme, network, asset, amount, payTo, ...}]}
-      // that a paying agent decodes, signs, and retries with. Body mirrors it in
-      // plain JSON for humans/debuggers.
-      reply.code(402);
-      reply.header("PAYMENT-REQUIRED", paymentRequiredHeader("/reverse-engineer"));
-      reply.header("accept-payment", "x402");
-      return buildRequirements("/reverse-engineer");
-    }
+  // Registered for GET/HEAD too: x402 validators (e.g. OKX `x402-check`) probe the
+  // endpoint without a body expecting the 402 challenge — a POST-only route would
+  // 404 and read as "not an x402 service".
+  app.route<{ Body: ImageBody }>({
+    method: ["GET", "HEAD", "POST"],
+    url: "/reverse-engineer",
+    handler: async (req, reply) => {
+      // x402 payment proof: `X-Payment` (v1) or `PAYMENT-SIGNATURE` (v2 clients).
+      const paymentHeader = (req.headers["x-payment"] ?? req.headers["payment-signature"]) as
+        | string
+        | undefined;
+      // Non-POST = discovery probe: always answer the challenge, and never touch
+      // settlement (verifying here could settle real money against a 402 reply).
+      const check =
+        req.method === "POST"
+          ? await verifyPayment(paymentHeader, "/reverse-engineer")
+          : ({ ok: false } as const);
+      if (!check.ok) {
+        // x402 challenge: the PAYMENT-REQUIRED header carries the base64 JSON
+        // {x402Version, resource, accepts:[{scheme, network, asset, amount, payTo, ...}]}
+        // that a paying agent decodes, signs, and retries with. Body mirrors it in
+        // plain JSON for humans/debuggers.
+        reply.code(402);
+        reply.header("PAYMENT-REQUIRED", paymentRequiredHeader("/reverse-engineer"));
+        reply.header("accept-payment", "x402");
+        return buildRequirements("/reverse-engineer");
+      }
 
-    try {
-      const image = await resolveImage(req.body ?? {});
-      const result = await reverseEngineer(image);
-      reply.header("x-payment-mode", check.mode);
-      return result;
-    } catch (err) {
-      reply.code(400);
-      return { error: String((err as Error).message) };
-    }
+      try {
+        const image = await resolveImage(req.body ?? {});
+        const result = await reverseEngineer(image);
+        reply.header("x-payment-mode", check.mode);
+        return result;
+      } catch (err) {
+        reply.code(400);
+        return { error: String((err as Error).message) };
+      }
+    },
   });
 
   return app;
