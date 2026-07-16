@@ -37,6 +37,7 @@ export interface X402Requirements {
   payTo: string;
   maxTimeoutSeconds: number;
   asset: string; // ERC-20 contract of the payout token
+  decimals: number; // token decimals — lets clients price the amount without a token-list lookup
   extra: Record<string, unknown>;
 }
 
@@ -79,6 +80,7 @@ export function x402Requirements(resource: string): X402Requirements {
     payTo: config.payment.payTo,
     maxTimeoutSeconds: config.payment.maxTimeoutSeconds,
     asset: config.payment.assetAddress,
+    decimals: config.payment.assetDecimals,
     // sessionCert lives on the buyer's paymentPayload.accepted.extra — NOT here.
     extra: { name: config.payment.asset, version: "1" },
   };
