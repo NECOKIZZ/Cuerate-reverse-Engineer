@@ -4,7 +4,12 @@
  *   GET  /health            — liveness + active provider summary
  *   GET  /                  — service manifest (what an agent reads to learn the contract)
  *   POST /identify          — FREE Stage-0 tier (instant, deterministic, no model calls)
- *   POST /reverse-engineer  — PAID full pipeline (402-gated), the product
+ *   ANY  /reverse-engineer  — PAID full pipeline, gated by the OKX Payment SDK (x402 v2)
+ *
+ * Payment enforcement lives entirely in the SDK middleware registered by
+ * registerX402Gate(): unpaid requests on the paid route — any method, including the
+ * marketplace's GET `x402-check` probe — receive 402 + the base64 PAYMENT-REQUIRED
+ * challenge header; verified requests reach the handler and settle after success.
  *
  * Request body for the image endpoints: { image_url } OR { image_base64 } (+ optional media_type).
  */
@@ -12,7 +17,7 @@ import Fastify from "fastify";
 import { config, assertConfigured, providerSummary, VERSION } from "./config.js";
 import { identify } from "./stage0/identify.js";
 import { reverseEngineer } from "./pipeline.js";
-import { buildRequirements, paymentRequiredHeader, verifyPayment } from "./payment/x402.js";
+import { registerX402Gate, buildChallenge, PAID_PATH, resourceUrl } from "./payment/x402.js";
 import { fetchImageBuffer } from "./util.js";
 
 interface ImageBody {
@@ -34,6 +39,10 @@ async function resolveImage(body: ImageBody): Promise<Buffer> {
 export function buildServer() {
   const app = Fastify({ logger: true, bodyLimit: 30 * 1024 * 1024 });
 
+  // x402 payment gate (OKX Payment SDK) — must register before routes so its
+  // onRequest hook runs ahead of every handler on the paid path.
+  registerX402Gate(app);
+
   app.get("/health", async () => ({
     ok: true,
     agent: "cuerate-image-reverse-engineer",
@@ -53,11 +62,14 @@ export function buildServer() {
         body: "{ image_url } or { image_base64 }",
         returns: "Stage 0 deterministic identify (dimensions, resolution-grid match, metadata, provenance heuristic)",
       },
-      "POST /reverse-engineer": {
+      [`POST ${PAID_PATH}`]: {
         price: `${config.payment.priceUsd.toFixed(2)} ${config.payment.asset} on ${config.payment.chain}`,
-        payment: "x402 — call once to receive 402 + payment requirements, settle, retry with X-Payment header",
+        payment:
+          "x402 v2 — call once to receive 402 + PAYMENT-REQUIRED challenge header, " +
+          "sign, retry with PAYMENT-SIGNATURE header",
         body: "{ image_url } or { image_base64 }",
         returns: "full structured prompt reconstruction + confidence + trust score",
+        x402: buildChallenge(),
       },
     },
     disclaimer:
@@ -77,41 +89,28 @@ export function buildServer() {
     }
   });
 
-  // ── PAID full pipeline (402-gated) ───────────────────────────────────────────
-  // Registered for GET/HEAD too: x402 validators (e.g. OKX `x402-check`) probe the
-  // endpoint without a body expecting the 402 challenge — a POST-only route would
-  // 404 and read as "not an x402 service".
+  // ── PAID full pipeline ──────────────────────────────────────────────────────
+  // Registered for GET/HEAD too: the SDK middleware answers those probes with the
+  // 402 challenge before this handler is reached; a POST-only route would 404 the
+  // marketplace's GET `x402-check` probe and read as "not an x402 service".
   app.route<{ Body: ImageBody }>({
     method: ["GET", "HEAD", "POST"],
-    url: "/reverse-engineer",
+    url: PAID_PATH,
     handler: async (req, reply) => {
-      // x402 payment proof: `X-Payment` (v1) or `PAYMENT-SIGNATURE` (v2 clients).
-      const paymentHeader = (req.headers["x-payment"] ?? req.headers["payment-signature"]) as
-        | string
-        | undefined;
-      // Non-POST = discovery probe: always answer the challenge, and never touch
-      // settlement (verifying here could settle real money against a 402 reply).
-      const check =
-        req.method === "POST"
-          ? await verifyPayment(paymentHeader, "/reverse-engineer")
-          : ({ ok: false } as const);
-      if (!check.ok) {
-        // x402 challenge: the PAYMENT-REQUIRED header carries the base64 JSON
-        // {x402Version, resource, accepts:[{scheme, network, asset, amount, payTo, ...}]}
-        // that a paying agent decodes, signs, and retries with. Body mirrors it in
-        // plain JSON for humans/debuggers.
-        reply.code(402);
-        reply.header("PAYMENT-REQUIRED", paymentRequiredHeader("/reverse-engineer"));
-        reply.header("accept-payment", "x402");
-        return buildRequirements("/reverse-engineer");
+      // Only reachable once the middleware verified payment (or dev-token access).
+      // A paid GET/HEAD carries no body → point the caller at the contract instead
+      // of running the pipeline on nothing.
+      if (req.method !== "POST") {
+        return { ok: true, usage: `POST ${resourceUrl()} with { image_url | image_base64 }` };
       }
-
       try {
         const image = await resolveImage(req.body ?? {});
         const result = await reverseEngineer(image);
-        reply.header("x-payment-mode", check.mode);
+        reply.header("x-payment-mode", config.payment.devMode ? "dev" : "live");
         return result;
       } catch (err) {
+        // 400 = no settlement: the SDK only settles 2xx responses, so a bad input
+        // never charges the buyer.
         reply.code(400);
         return { error: String((err as Error).message) };
       }

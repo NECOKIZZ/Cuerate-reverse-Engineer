@@ -1,6 +1,7 @@
 /**
  * util.ts — small shared helpers.
  */
+import { config } from "./config.js";
 
 /** Extract the first balanced JSON object from a model's text output. */
 export function extractJson(text: string): unknown {
@@ -80,9 +81,12 @@ export function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
 }
 
-/** Fetch an http(s) image URL into a Buffer, with a size cap. */
+/** Fetch an http(s) image URL into a Buffer, with a size cap and a hard timeout. */
 export async function fetchImageBuffer(url: string, maxBytes = 25 * 1024 * 1024): Promise<Buffer> {
-  const res = await fetch(url, { redirect: "follow" });
+  const res = await fetch(url, {
+    redirect: "follow",
+    signal: AbortSignal.timeout(config.timeouts.imageFetchMs),
+  });
   if (!res.ok) throw new Error(`failed to fetch image (${res.status} ${res.statusText})`);
   const arr = new Uint8Array(await res.arrayBuffer());
   if (arr.byteLength > maxBytes) throw new Error(`image exceeds ${maxBytes} byte cap`);

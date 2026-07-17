@@ -60,9 +60,11 @@ async function main() {
   const req402 = (await unpaid.json()) as any;
   if (unpaid.status === 402) {
     const a = req402.accepts?.[0];
+    const hdr = unpaid.headers.get("payment-required");
     console.log(
-      `   payment required: ${a?.maxAmountRequired} ${a?.asset} on ${a?.network} → ${a?.payTo}`,
+      `   payment required: ${a?.amount} atomic of ${a?.asset} on ${a?.network} → ${a?.payTo}`,
     );
+    console.log(`   PAYMENT-REQUIRED header present: ${hdr ? "yes (base64 challenge)" : "NO — x402 broken!"}`);
   }
 
   // ── 3. "Settle" and retry with X-Payment ───────────────────────────────────

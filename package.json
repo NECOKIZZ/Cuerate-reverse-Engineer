@@ -19,6 +19,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.24.1",
+    "@okxweb3/x402-core": "^0.1.0",
+    "@okxweb3/x402-evm": "^0.2.1",
+    "@okxweb3/x402-fastify": "^0.1.1",
     "dotenv": "^16.4.7",
     "exifr": "^7.1.3",
     "fastify": "^5.2.0",

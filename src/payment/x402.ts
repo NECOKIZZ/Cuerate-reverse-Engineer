@@ -1,245 +1,250 @@
 /**
- * x402.ts — the machine-payable gate (x402 / OKX A2MCP).
+ * x402.ts — the machine-payable gate, built on the official OKX Payment SDK
+ * (@okxweb3/x402-fastify + @okxweb3/x402-core + @okxweb3/x402-evm).
  *
  * The whole wedge of this agent is that ANOTHER AGENT can pay per call with no
- * account and no human. That convention is HTTP 402:
+ * account and no human. That convention is HTTP 402 (x402 v2):
  *
  *   1. Agent calls the paid endpoint with no payment.
- *   2. Server replies 402 Payment Required + a machine-readable `accepts` block
- *      describing exactly how to pay (amount, asset, network, pay-to address).
- *   3. Agent settles via its OKX Agentic Wallet and retries with the signed x402
- *      payload in the `X-Payment` header.
- *   4. Server verifies + settles the payload through the OKX facilitator, then runs the job.
+ *   2. SDK middleware replies 402 + a `PAYMENT-REQUIRED` header: base64 JSON of
+ *      {x402Version: 2, resource: {url, description, mimeType}, accepts: [...]}.
+ *   3. Agent signs an EIP-3009 authorization for the advertised requirement and
+ *      retries with the payload in the `PAYMENT-SIGNATURE` header.
+ *   4. Middleware verifies via the OKX facilitator (/api/v6/pay/x402/verify), runs
+ *      our handler, settles after a 2xx (/settle), and attaches a `PAYMENT-RESPONSE`
+ *      receipt header. Non-2xx responses are never charged.
  *
- * DEV MODE (PAYMENT_DEV_MODE=true): a shared token stands in for settlement so the whole
- * system runs locally end-to-end with no onchain money. LIVE MODE: real verify+settle
- * against the OKX x402 facilitator (`/api/v6/pay/x402/verify` → `/settle`).
+ * This file wires the SDK to our config:
+ *   - scheme  : "exact"      (one-shot pay-per-call — the A2MCP standard)
+ *   - network : "eip155:196" (CAIP-2 for X Layer mainnet)
+ *   - asset   : USD₮0 on X Layer (OKX's official settlement stablecoin)
  *
- * Docs: https://web3.okx.com/onchainos/dev-docs/payments/api-http-batch
+ * DEV MODE (PAYMENT_DEV_MODE=true): an onProtectedRequest hook grants access when
+ * X-Payment equals PAYMENT_DEV_TOKEN, so the whole system runs locally end-to-end
+ * with no onchain money. Unpaid requests still get the real v2 402 challenge.
+ *
+ * Docs: https://web3.okx.com/onchainos/dev-docs/okxai/howtomcp
+ *       https://web3.okx.com/onchainos/dev-docs/payments/sdk-nodejs
  */
-import crypto from "node:crypto";
+import type { FastifyInstance } from "fastify";
+import {
+  paymentMiddlewareFromHTTPServer,
+  x402HTTPResourceServer,
+  x402ResourceServer,
+} from "@okxweb3/x402-fastify";
+import type { FacilitatorClient, RoutesConfig } from "@okxweb3/x402-core/server";
+import type {
+  PaymentPayload,
+  PaymentRequirements,
+  SettleResponse,
+  SupportedResponse,
+  VerifyResponse,
+} from "@okxweb3/x402-core/types";
+import { OKXFacilitatorClient } from "@okxweb3/x402-core";
+import { ExactEvmScheme } from "@okxweb3/x402-evm/exact/server";
+import type { Network } from "@okxweb3/x402-core/types";
 import { config, paymentLiveConfigured } from "../config.js";
 
-const X402_VERSION = 1;
+/** The one payment scheme we sell under — one-shot exact payment (A2MCP standard). */
+const SCHEME = "exact";
 
-/** OKX aggregated-deferred scheme — the settlement model A2MCP pay-per-call uses. */
-const X402_SCHEME = "aggr_deferred";
+/** config.payment.network as the SDK's CAIP-2 Network type (normalized in config.ts). */
+const NETWORK = config.payment.network as Network;
 
-/** A single x402 payment-requirements object (what the buyer signs against). */
-export interface X402Requirements {
-  scheme: string;
-  network: string;
-  amount: string; // atomic units of `asset`, e.g. "350000" for 0.35 USDT (6 dp)
-  maxAmountRequired: string; // same value — kept for x402-v1 clients that read this name
-  resource: string;
-  description: string;
-  mimeType: string;
-  payTo: string;
-  maxTimeoutSeconds: number;
-  asset: string; // ERC-20 contract of the payout token
-  decimals: number; // token decimals — lets clients price the amount without a token-list lookup
-  extra: Record<string, unknown>;
-}
+export const PAID_PATH = "/reverse-engineer";
 
-/** The full 402 challenge advertised to unpaid callers (body + PAYMENT-REQUIRED header). */
-export interface PaymentRequirements {
-  x402Version: number;
-  resource: string;
-  error: string;
-  accepts: X402Requirements[];
-}
+const DESCRIPTION =
+  "Cuerate Lens — one full Prompt Reverse-Engineer call " +
+  "(image → structured prompt + per-field confidence + trust score).";
 
 /**
  * Convert a human decimal amount (0.35) to atomic token units ("350000") without float
  * error. Pure string/BigInt math so 0.35 @ 6dp is exact.
  */
-function toAtomic(amount: number, decimals: number): string {
+export function toAtomic(amount: number, decimals: number): string {
   const [intPart, fracRaw = ""] = amount.toString().split(".");
   const frac = (fracRaw + "0".repeat(decimals)).slice(0, decimals);
   const digits = (intPart + frac).replace(/^0+(?=\d)/, "");
   return BigInt(digits === "" ? "0" : digits).toString();
 }
 
-/**
- * The canonical requirements object. Used BOTH for the advertised 402 and for the
- * facilitator verify/settle calls — so the buyer always signs exactly what we later
- * verify, and the amount/payTo can never be undercut by a client-supplied value.
- */
-export function x402Requirements(resource: string): X402Requirements {
-  const amount = toAtomic(config.payment.priceUsd, config.payment.assetDecimals);
-  return {
-    scheme: X402_SCHEME,
-    network: config.payment.network,
-    amount,
-    maxAmountRequired: amount,
-    resource,
-    description:
-      "Cuerate Lens — one full Prompt Reverse-Engineer call " +
-      "(image → structured prompt + per-field confidence + trust score).",
-    mimeType: "application/json",
-    payTo: config.payment.payTo,
-    maxTimeoutSeconds: config.payment.maxTimeoutSeconds,
-    asset: config.payment.assetAddress,
-    decimals: config.payment.assetDecimals,
-    // sessionCert lives on the buyer's paymentPayload.accepted.extra — NOT here.
-    extra: { name: config.payment.asset, version: "1" },
-  };
-}
-
-/** Build the 402 challenge advertised to unpaid callers. */
-export function buildRequirements(resource: string): PaymentRequirements {
-  return {
-    x402Version: X402_VERSION,
-    resource,
-    error: "payment required",
-    accepts: [x402Requirements(resource)],
-  };
+/** Full public URL of the paid resource — v2 requires an absolute URL, not a path. */
+export function resourceUrl(): string {
+  return `${config.publicBaseUrl}${PAID_PATH}`;
 }
 
 /**
- * The `PAYMENT-REQUIRED` header value: base64 of the JSON challenge. This is what an
- * x402 client (e.g. the OKX Agentic Wallet / onchainos CLI) decodes to learn how to
- * pay — asset, amount, payTo, network, scheme — sign, and retry.
+ * The v2 402 challenge as plain JSON. The SDK middleware emits the authoritative
+ * base64 copy in the PAYMENT-REQUIRED header; we mirror the same values in the
+ * response body (and the / manifest) for humans, debuggers, and validators that
+ * read `x402Version` from the body.
  */
-export function paymentRequiredHeader(resource: string): string {
-  return Buffer.from(JSON.stringify(buildRequirements(resource)), "utf8").toString("base64");
-}
-
-export interface PaymentCheck {
-  ok: boolean;
-  reason: string;
-  mode: "dev" | "live";
-  payer?: string;
-}
-
-// ── OKX facilitator client ────────────────────────────────────────────────────
-
-/** OKX API request signature: base64(HMAC-SHA256(timestamp + method + path + body)). */
-function okxHeaders(method: string, path: string, body: string): Record<string, string> {
-  const timestamp = new Date().toISOString();
-  const prehash = timestamp + method.toUpperCase() + path + body;
-  const sign = crypto.createHmac("sha256", config.okx.apiSecret).update(prehash).digest("base64");
+export function buildChallenge(): Record<string, unknown> {
   return {
-    "OK-ACCESS-KEY": config.okx.apiKey,
-    "OK-ACCESS-SIGN": sign,
-    "OK-ACCESS-PASSPHRASE": config.okx.passphrase,
-    "OK-ACCESS-TIMESTAMP": timestamp,
-    "Content-Type": "application/json",
+    x402Version: 2,
+    error: "Payment required",
+    resource: {
+      url: resourceUrl(),
+      description: DESCRIPTION,
+      mimeType: "application/json",
+    },
+    accepts: [
+      {
+        scheme: SCHEME,
+        network: config.payment.network,
+        amount: toAtomic(config.payment.priceUsd, config.payment.assetDecimals),
+        asset: config.payment.assetAddress,
+        payTo: config.payment.payTo,
+        maxTimeoutSeconds: config.payment.maxTimeoutSeconds,
+        extra: { name: config.payment.asset, version: "1" },
+      },
+    ],
   };
 }
 
-interface FacilitatorResult {
-  httpOk: boolean;
-  status: number;
-  data: Record<string, any> | null;
-  raw: any;
-}
+// ── Facilitator client ────────────────────────────────────────────────────────
 
-async function facilitatorPost(path: string, payload: unknown): Promise<FacilitatorResult> {
-  const body = JSON.stringify(payload);
-  const res = await fetch(config.okx.baseURL + path, {
-    method: "POST",
-    headers: okxHeaders("POST", path, body),
-    body,
-  });
-  let raw: any = null;
-  try {
-    raw = await res.json();
-  } catch {
-    raw = null;
-  }
-  // OKX wraps as { code, msg, data }; data may be an object or a single-element array.
-  const data = raw && "data" in raw ? (Array.isArray(raw.data) ? raw.data[0] ?? null : raw.data) : raw;
-  return { httpOk: res.ok, status: res.status, data, raw };
-}
-
-/** Decode the X-Payment header into the buyer's x402 payment payload (base64 JSON, or raw JSON). */
-function decodePaymentPayload(header: string): Record<string, unknown> | null {
-  try {
-    const json = Buffer.from(header, "base64").toString("utf8");
-    return JSON.parse(json);
-  } catch {
-    /* fall through */
-  }
-  try {
-    return JSON.parse(header);
-  } catch {
-    return null;
-  }
+/** The supported-kind we sell under — used as fallback + guaranteed registration. */
+function staticSupported(): SupportedResponse {
+  return {
+    kinds: [{ x402Version: 2, scheme: SCHEME, network: NETWORK }],
+    extensions: [],
+    signers: {},
+  };
 }
 
 /**
- * Verify (and settle) a payment proof from the `X-Payment` header.
- *
- * DEV MODE: any request whose X-Payment equals PAYMENT_DEV_TOKEN passes — lets the agent
- * run locally and in the demo without real settlement.
- *
- * LIVE MODE: decode the buyer's signed x402 payload, then call the OKX facilitator
- * verify → settle with OUR server-defined requirements (so amount/payTo can't be undercut).
- * Fail closed: any network error, non-2xx, isValid≠true, or settle success≠true rejects.
+ * Wraps the real OKX facilitator so the 402 challenge NEVER depends on facilitator
+ * availability:
+ *   - getSupported(): tries the real endpoint, falls back to (and always merges in)
+ *     our static exact/X-Layer kind — so route validation and the 402 path stay up
+ *     even if /supported hiccups. verify/settle still hit the real facilitator.
+ *   - In dev mode (no OKX API keys) there is no inner client: getSupported() is
+ *     static and verify/settle fail closed (dev access is granted by the dev-token
+ *     hook BEFORE payment processing, so these are never reached in the happy path).
  */
-export async function verifyPayment(
-  paymentHeader: string | undefined,
-  resource = "/reverse-engineer",
-): Promise<PaymentCheck> {
-  if (config.payment.devMode) {
-    if (paymentHeader && paymentHeader === config.payment.devToken) {
-      return { ok: true, reason: "dev token accepted", mode: "dev", payer: "dev-agent" };
+class ResilientFacilitator implements FacilitatorClient {
+  constructor(private inner: OKXFacilitatorClient | null) {}
+
+  async getSupported(): Promise<SupportedResponse> {
+    const fallback = staticSupported();
+    if (!this.inner) return fallback;
+    try {
+      const real = await this.inner.getSupported();
+      const ours = fallback.kinds[0];
+      const present = real.kinds?.some(
+        (k) => k.x402Version === 2 && k.scheme === SCHEME && k.network === ours.network,
+      );
+      if (!present) real.kinds = [...(real.kinds ?? []), ours];
+      return real;
+    } catch (err) {
+      console.warn(
+        `[x402] facilitator getSupported failed (${(err as Error).message}) — using static kinds`,
+      );
+      return fallback;
     }
-    return {
-      ok: false,
-      reason: "missing or invalid X-Payment (dev mode expects the dev token)",
-      mode: "dev",
-    };
   }
 
-  // ── LIVE settlement via the OKX x402 facilitator ────────────────────────────
+  async verify(p: PaymentPayload, r: PaymentRequirements): Promise<VerifyResponse> {
+    if (!this.inner) {
+      return {
+        isValid: false,
+        invalidReason: "dev_mode",
+        invalidMessage: "PAYMENT_DEV_MODE=true — real settlement is disabled; use the dev token",
+      };
+    }
+    return this.inner.verify(p, r);
+  }
+
+  async settle(p: PaymentPayload, r: PaymentRequirements): Promise<SettleResponse> {
+    if (!this.inner) {
+      return {
+        success: false,
+        errorReason: "dev_mode",
+        errorMessage: "PAYMENT_DEV_MODE=true — real settlement is disabled",
+        transaction: "",
+        network: r.network,
+      };
+    }
+    return this.inner.settle(p, r);
+  }
+
+  async getSettleStatus(txHash: string) {
+    if (!this.inner) throw new Error("dev mode: no facilitator");
+    return this.inner.getSettleStatus(txHash);
+  }
+}
+
+function makeFacilitator(): ResilientFacilitator {
+  if (config.payment.devMode) return new ResilientFacilitator(null);
   const live = paymentLiveConfigured();
   if (!live.ok) {
-    return { ok: false, reason: `live payment not configured: missing ${live.missing.join(", ")}`, mode: "live" };
+    // assertConfigured() refuses to boot in this state; belt-and-braces here.
+    throw new Error(`live payment misconfigured: missing ${live.missing.join(", ")}`);
   }
-  if (!paymentHeader) {
-    return { ok: false, reason: "no X-Payment header", mode: "live" };
-  }
+  return new ResilientFacilitator(
+    new OKXFacilitatorClient({
+      apiKey: config.okx.apiKey,
+      secretKey: config.okx.apiSecret,
+      passphrase: config.okx.passphrase,
+      baseUrl: config.okx.baseURL,
+    }),
+  );
+}
 
-  const paymentPayload = decodePaymentPayload(paymentHeader);
-  if (!paymentPayload) {
-    return { ok: false, reason: "malformed X-Payment header (expected base64/JSON x402 payload)", mode: "live" };
-  }
+// ── The gate ──────────────────────────────────────────────────────────────────
 
-  const requestBody = {
-    x402Version: X402_VERSION,
-    paymentPayload,
-    paymentRequirements: x402Requirements(resource),
+/**
+ * Register the x402 payment gate on the Fastify app. Every method on PAID_PATH is
+ * protected: unpaid requests (including the OKX x402-check GET probe) receive the
+ * standard 402 + PAYMENT-REQUIRED header; paid requests are verified before our
+ * handler runs and settled after it succeeds. Must be called before app.listen().
+ */
+export function registerX402Gate(app: FastifyInstance): void {
+  const server = new x402ResourceServer(makeFacilitator()).register(
+    NETWORK,
+    new ExactEvmScheme(),
+  );
+
+  const routes: RoutesConfig = {
+    // No verb prefix = every method (GET/HEAD probes must see the 402 challenge too).
+    [PAID_PATH]: {
+      accepts: {
+        scheme: SCHEME,
+        network: NETWORK,
+        payTo: config.payment.payTo,
+        // AssetAmount form: exact atomic units of the exact contract we list on-chain —
+        // never derived from a token-list lookup, so challenge and listing can't drift.
+        price: {
+          amount: toAtomic(config.payment.priceUsd, config.payment.assetDecimals),
+          asset: config.payment.assetAddress,
+        },
+        maxTimeoutSeconds: config.payment.maxTimeoutSeconds,
+        // EIP-712 domain of the asset — buyers sign against this; it must match the
+        // token contract's own domain (USD₮0 / "1" for USDT0 on X Layer).
+        extra: { name: config.payment.asset, version: "1" },
+      },
+      resource: resourceUrl(),
+      description: DESCRIPTION,
+      mimeType: "application/json",
+      // Mirror the challenge in the body (the header is what's validated; the body
+      // is a courtesy for humans + validators that read x402Version from the body).
+      unpaidResponseBody: async () => ({
+        contentType: "application/json",
+        body: buildChallenge(),
+      }),
+    },
   };
 
-  try {
-    // 1) verify — is the signed authorization valid for our requirements?
-    const verify = await facilitatorPost("/api/v6/pay/x402/verify", requestBody);
-    if (!verify.httpOk || !verify.data || verify.data.isValid !== true) {
-      const why =
-        verify.data?.invalidReason || verify.data?.invalidMessage || verify.raw?.msg || `HTTP ${verify.status}`;
-      return { ok: false, reason: `payment verify failed: ${why}`, mode: "live" };
-    }
+  const httpServer = new x402HTTPResourceServer(server, routes);
 
-    // 2) settle — accept the authorization for batch on-chain settlement.
-    const settle = await facilitatorPost("/api/v6/pay/x402/settle", requestBody);
-    if (!settle.httpOk || !settle.data || settle.data.success !== true) {
-      const why =
-        settle.data?.errorReason || settle.data?.errorMessage || settle.raw?.msg || `HTTP ${settle.status}`;
-      return { ok: false, reason: `payment settle failed: ${why}`, mode: "live" };
-    }
+  // DEV MODE bypass: the shared token stands in for settlement so the whole system
+  // runs locally end-to-end with no onchain money. Runs BEFORE payment processing.
+  httpServer.onProtectedRequest(async (ctx) => {
+    if (!config.payment.devMode) return;
+    const token = ctx.adapter.getHeader("x-payment");
+    if (token && token === config.payment.devToken) return { grantAccess: true };
+  });
 
-    // settle success = accepted for settlement (batch may land on-chain shortly after);
-    // per OKX docs this is the point at which the resource may be released.
-    return {
-      ok: true,
-      reason: "verified + settled via OKX facilitator",
-      mode: "live",
-      payer: settle.data.payer || verify.data.payer,
-    };
-  } catch (err) {
-    // Fail closed on any transport/parsing error — never release the resource unpaid.
-    return { ok: false, reason: `facilitator error: ${(err as Error).message}`, mode: "live" };
-  }
+  paymentMiddlewareFromHTTPServer(app, httpServer);
 }

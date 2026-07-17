@@ -25,6 +25,26 @@ function csv(v: string | undefined, dflt: string[]): string[] {
 
 export const VERSION = "0.1.0";
 
+/**
+ * Normalize PAYMENT_NETWORK to the CAIP-2 id OKX expects. "eip155:196" is X Layer
+ * mainnet; anything already in namespace:reference form passes through.
+ */
+function normalizeNetwork(v: string | undefined): string {
+  const raw = (v || "").trim();
+  if (!raw) return "eip155:196";
+  if (raw.includes(":")) return raw;
+  if (/^\d+$/.test(raw)) return `eip155:${raw}`; // bare chain id, e.g. "196"
+  if (/^x\s*layer$|^xlayer$/i.test(raw)) return "eip155:196";
+  return "eip155:196";
+}
+
+/** Normalize PAYMENT_ASSET to the token's EIP-712 domain name (USD₮0 on X Layer). */
+function normalizeAssetName(v: string | undefined): string {
+  const raw = (v || "").trim();
+  if (!raw || /^usdt0?$/i.test(raw)) return "USD₮0";
+  return raw;
+}
+
 // Default ensemble: a genuine multi-vendor mix, all reachable via the single OpenRouter key.
 // Each pass fails independently and gracefully, so a bad slug never breaks the whole call.
 const DEFAULT_ENSEMBLE = [
@@ -67,25 +87,36 @@ export const config = {
   // image-statistics-derived (clearly-labeled MOCK) output. For demos/CI or restricted envs.
   mockLlm: bool(process.env.MOCK_LLM, false),
 
+  // ── Public URL of this deployment ───────────────────────────────────────────
+  // x402 v2 challenges must advertise the resource as an ABSOLUTE url. Set
+  // PUBLIC_BASE_URL on the host (Railway) to the real https origin, no trailing slash.
+  publicBaseUrl: (
+    process.env.PUBLIC_BASE_URL || "https://cuerate-reverse-engineer-production.up.railway.app"
+  ).replace(/\/+$/, ""),
+
   // ── Payment (x402 · OKX A2MCP) ──────────────────────────────────────────────
   payment: {
     priceUsd: num(process.env.RE_PRICE_USD, 0.35),
-    asset: process.env.PAYMENT_ASSET || "USDT",
+    // EIP-712 domain name of the settlement asset — buyers sign against this, so it
+    // must match the token contract's own domain. USD₮0 (with the ₮) on X Layer.
+    // A legacy "USDT" env value is normalized so a stale deploy var can't break signing.
+    asset: normalizeAssetName(process.env.PAYMENT_ASSET),
     chain: process.env.PAYMENT_CHAIN || "X Layer",
     payTo: process.env.PAYMENT_ADDRESS || "0xYOUR_OKX_AGENTIC_WALLET_ADDRESS",
     devMode: bool(process.env.PAYMENT_DEV_MODE, true),
     devToken: process.env.PAYMENT_DEV_TOKEN || "dev-okx-demo-token",
 
     // ── Live x402 settlement (only used when devMode=false) ───────────────────
-    // The x402 network id OKX expects (NOT the human "X Layer" label above).
-    network: process.env.PAYMENT_NETWORK || "xlayer",
-    // ERC-20 contract of the payout asset on that network (USDT on X Layer).
-    // The facilitator matches the signed transfer against it, and the 402 challenge
-    // advertises it — so it must ALWAYS be a real contract, even in dev mode.
-    // Default verified on-chain (rpc.xlayer.tech): symbol=USDT, decimals=6.
+    // CAIP-2 network id — "eip155:196" is X Layer mainnet. This exact string is what
+    // OKX's validator and the Payment SDK expect; legacy values ("xlayer", "196",
+    // "X Layer") are normalized so a stale deploy var can't produce an invalid challenge.
+    network: normalizeNetwork(process.env.PAYMENT_NETWORK),
+    // ERC-20 contract of the settlement asset. OKX requires USD₮0 on X Layer
+    // (0x779d…3736) — NOT plain USDT (0x1E4a…D41d); the wrong contract is a
+    // documented review rejection. Verified 6dp on-chain.
     assetAddress:
-      process.env.PAYMENT_ASSET_ADDRESS || "0x1E4a5963aBFD975d8c9021ce480b42188849D41d",
-    // Token decimals — USDT/USDC are 6. Used to convert priceUsd → atomic units.
+      process.env.PAYMENT_ASSET_ADDRESS || "0x779Ded0c9e1022225f8E0630b35a9b54bE713736",
+    // Token decimals — USD₮0/USDT/USDC are 6. Used to convert priceUsd → atomic units.
     assetDecimals: Math.trunc(num(process.env.PAYMENT_ASSET_DECIMALS, 6)),
     // How long a returned 402 quote stays payable, in seconds.
     maxTimeoutSeconds: Math.trunc(num(process.env.PAYMENT_MAX_TIMEOUT_SECONDS, 300)),
@@ -104,6 +135,18 @@ export const config = {
 
   // ── Server ──────────────────────────────────────────────────────────────────
   port: num(process.env.PORT, 8787),
+
+  // ── Response-time budget ────────────────────────────────────────────────────
+  // The OKX platform test calls the paid endpoint and STOPS the task if it hangs —
+  // "unable to receive a response … timed out" is a documented review rejection. Every
+  // model call gets a hard per-call timeout, so the slowest possible paid response is
+  // bounded (~2 sequential model phases + stage2 ≈ 3×llmTimeoutMs worst case).
+  timeouts: {
+    // Hard cap per individual model call (each ensemble pass, aggregator, image-gen).
+    llmMs: Math.trunc(num(process.env.LLM_TIMEOUT_MS, 60_000)),
+    // Cap for fetching a caller-supplied image_url.
+    imageFetchMs: Math.trunc(num(process.env.IMAGE_FETCH_TIMEOUT_MS, 15_000)),
+  },
 
   // ── Cuerate flywheel ────────────────────────────────────────────────────────
   cuerateSeedThreshold: num(process.env.CUERATE_SEED_THRESHOLD, 0.55),

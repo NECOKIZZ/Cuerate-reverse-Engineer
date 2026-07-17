@@ -51,6 +51,9 @@ export async function chatComplete(opts: {
   const res = await fetch(`${config.openrouter.baseURL}/chat/completions`, {
     method: "POST",
     headers: headers(),
+    // Hard per-call cap: a hung provider must never hang the paid endpoint — the
+    // OKX platform test times the whole call out and rejects the listing.
+    signal: AbortSignal.timeout(config.timeouts.llmMs),
     body: JSON.stringify({
       model: opts.model,
       max_tokens: opts.maxTokens ?? 1500,
@@ -77,6 +80,7 @@ export async function generateImage(prompt: string, model: string): Promise<Buff
     const res = await fetch(`${config.openrouter.baseURL}/chat/completions`, {
       method: "POST",
       headers: headers(),
+      signal: AbortSignal.timeout(config.timeouts.llmMs),
       body: JSON.stringify({
         model,
         modalities: ["image", "text"],
