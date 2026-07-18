@@ -85,27 +85,32 @@ export function resourceUrl(): string {
 }
 
 /**
- * The v2 402 challenge as plain JSON. The SDK middleware emits the authoritative
- * base64 copy in the PAYMENT-REQUIRED header; we mirror the same values in the
- * response body (and the / manifest) for humans, debuggers, and validators that
- * read `x402Version` from the body.
+ * The v2 402 challenge as plain JSON. The SDK middleware base64s exactly this
+ * object into the PAYMENT-REQUIRED header (verified live: header == body), so
+ * this IS the shape the marketplace validator sees. Mirror the shape of a
+ * KNOWN-APPROVED listing (Vouch #4984) exactly: each accepts entry carries
+ * `decimals` AND its own `resource` object, and there is no extra `error` key.
+ * The 07-18 rejection ("not passed x402 standard validation") hit after the
+ * SDK migration dropped `decimals` — the pre-SDK gate had it (commit 2d0bbfc).
  */
 export function buildChallenge(): Record<string, unknown> {
+  const resource = {
+    url: resourceUrl(),
+    description: DESCRIPTION,
+    mimeType: "application/json",
+  };
   return {
     x402Version: 2,
-    error: "Payment required",
-    resource: {
-      url: resourceUrl(),
-      description: DESCRIPTION,
-      mimeType: "application/json",
-    },
+    resource,
     accepts: SCHEMES.map((scheme) => ({
       scheme,
       network: config.payment.network,
       amount: toAtomic(config.payment.priceUsd, config.payment.assetDecimals),
+      decimals: config.payment.assetDecimals,
       asset: config.payment.assetAddress,
       payTo: config.payment.payTo,
       maxTimeoutSeconds: config.payment.maxTimeoutSeconds,
+      resource,
       extra: { name: config.payment.asset, version: "1" },
     })),
   };
@@ -259,4 +264,17 @@ export function registerX402Gate(app: FastifyInstance): void {
   });
 
   paymentMiddlewareFromHTTPServer(app, httpServer);
+
+  // The SDK builds its own PAYMENT-REQUIRED header and it omits `decimals` and the
+  // per-entry `resource` object — fields every approved listing (e.g. Vouch #4984)
+  // carries and the marketplace validator checks. Rewrite the header (and body) of
+  // every 402 on the paid path with our canonical challenge so header == body ==
+  // the approved shape, regardless of SDK internals.
+  app.addHook("onSend", async (req, reply, payload) => {
+    if (reply.statusCode !== 402 || !req.url.startsWith(PAID_PATH)) return payload;
+    const challenge = JSON.stringify(buildChallenge());
+    reply.header("PAYMENT-REQUIRED", Buffer.from(challenge).toString("base64"));
+    reply.header("content-type", "application/json; charset=utf-8");
+    return challenge;
+  });
 }
