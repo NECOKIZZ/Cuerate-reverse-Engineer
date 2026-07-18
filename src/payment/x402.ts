@@ -169,7 +169,20 @@ class ResilientFacilitator implements FacilitatorClient {
         invalidMessage: "PAYMENT_DEV_MODE=true — real settlement is disabled; use the dev token",
       };
     }
-    return this.inner.verify(p, r);
+    try {
+      const out = await this.inner.verify(p, r);
+      if (!out.isValid) {
+        lastVerifyFailure = `verify rejected: ${out.invalidReason ?? "?"} — ${out.invalidMessage ?? ""}`;
+        console.warn(`[x402] ${lastVerifyFailure}`);
+      } else {
+        lastVerifyFailure = null;
+      }
+      return out;
+    } catch (err) {
+      lastVerifyFailure = `verify threw: ${(err as Error).message}`;
+      console.warn(`[x402] ${lastVerifyFailure}`);
+      throw err;
+    }
   }
 
   async settle(p: PaymentPayload, r: PaymentRequirements): Promise<SettleResponse> {
@@ -190,6 +203,17 @@ class ResilientFacilitator implements FacilitatorClient {
     return this.inner.getSettleStatus(txHash);
   }
 }
+
+/**
+ * DIAGNOSTIC (temporary): last verify failure reason, surfaced on 402 responses to
+ * requests that DID attach a payment. Both `exact` (EOA) and `aggr_deferred` (OKX
+ * agentic wallet, via OKX's own CLI) live payments currently bounce with a bare
+ * re-challenge, and the onSend rewrite below hides the SDK's error body — so
+ * without this the facilitator's actual rejection reason is unobservable from
+ * outside Railway. Module-level is fine for a diagnostic (worst case a concurrent
+ * request reads a neighbour's reason). Remove once the live path settles.
+ */
+let lastVerifyFailure: string | null = null;
 
 function makeFacilitator(): ResilientFacilitator {
   if (config.payment.devMode) return new ResilientFacilitator(null);
@@ -332,6 +356,14 @@ export function registerX402Gate(app: FastifyInstance): void {
   // the approved shape, regardless of SDK internals.
   app.addHook("onSend", async (req, reply, payload) => {
     if (reply.statusCode !== 402 || !req.url.startsWith(PAID_PATH)) return payload;
+    // DIAGNOSTIC (temporary): when the caller attached a payment and still got a 402,
+    // expose why on a side-channel header. The canonical challenge header/body below
+    // stay byte-identical, so the marketplace validator sees the exact approved shape.
+    const attemptedPayment =
+      req.headers["payment-signature"] ?? req.headers["x-payment"] ?? null;
+    if (attemptedPayment && lastVerifyFailure) {
+      reply.header("x-verify-failure", lastVerifyFailure.slice(0, 900));
+    }
     const challenge = JSON.stringify(buildChallenge());
     reply.header("PAYMENT-REQUIRED", Buffer.from(challenge).toString("base64"));
     reply.header("content-type", "application/json; charset=utf-8");
