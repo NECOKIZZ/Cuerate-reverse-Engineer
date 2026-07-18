@@ -68,7 +68,11 @@ export const config = {
   ensembleModels: csv(process.env.ENSEMBLE_MODELS, DEFAULT_ENSEMBLE),
 
   // The model that merges the ensemble into the final confidence-scored JSON (Stage 1.5).
-  aggregatorModel: process.env.AGGREGATOR_MODEL || "anthropic/claude-sonnet-5",
+  // This is the latency long pole of the whole paid call (~3.4–3.8k completion tokens,
+  // generated sequentially after the ensemble). Default to a fast flash-class model so the
+  // paid endpoint answers well inside the marketplace task window; override with
+  // AGGREGATOR_MODEL if you want a heavier merger.
+  aggregatorModel: process.env.AGGREGATOR_MODEL || "google/gemini-3.5-flash",
 
   // Passes used in offline mock mode (no network).
   ensembleSize: Math.max(2, num(process.env.ENSEMBLE_SIZE, 3)),
@@ -120,6 +124,12 @@ export const config = {
     assetDecimals: Math.trunc(num(process.env.PAYMENT_ASSET_DECIMALS, 6)),
     // How long a returned 402 quote stays payable, in seconds.
     maxTimeoutSeconds: Math.trunc(num(process.env.PAYMENT_MAX_TIMEOUT_SECONDS, 300)),
+    // Public JSON-RPC endpoint for the settlement chain (X Layer). Used ONLY by the
+    // settlement-timeout recovery hook to confirm a transfer that the facilitator
+    // reported as status:"timeout" — the OKX facilitator often times out on slow
+    // settle confirmation even though the USDT0 transfer already landed on-chain
+    // (same production gotcha Keryx patched). Never used to move funds.
+    rpcUrl: (process.env.PAYMENT_RPC_URL || "https://rpc.xlayer.tech").replace(/\/+$/, ""),
   },
 
   // ── OKX facilitator (x402 verify/settle) ────────────────────────────────────

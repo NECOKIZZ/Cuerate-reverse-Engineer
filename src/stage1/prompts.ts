@@ -116,7 +116,17 @@ register these generation models expect), not as a summary of the JSON.
 
 provenance field labeling rule: always tag this "heuristic" unless a deterministic
 Stage 0 signal (pixel-grid match, C2PA manifest presence) makes it certain — never
-let the aggregator promote a model's stylistic impression into "confirmed".`;
+let the aggregator promote a model's stylistic impression into "confirmed".
+
+Brevity requirements (hard limits — this response is on a paid, latency-bound path):
+- Each field "value": one dense sentence, max ~25 words. No hedging filler.
+- "notes": include ONLY when reports genuinely disagreed; one short clause. Omit the
+  key entirely when there is nothing to flag.
+- "agreement": use the compact form "3/3", "2/3", "contested", "deterministic" — not
+  a prose sentence.
+- reconstructed_prompt: max ~120 words. Comma-separated clauses, no preamble.
+- overall_reconstruction_notes: max 2 sentences.
+Do not sacrifice specificity — cut connective prose, not visual detail.`;
 
 /**
  * Small framing perturbations appended to each independent pass so N Claude passes

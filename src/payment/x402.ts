@@ -210,6 +210,53 @@ function makeFacilitator(): ResilientFacilitator {
 
 // ── The gate ──────────────────────────────────────────────────────────────────
 
+/** keccak256("Transfer(address,address,uint256)") — the ERC-20 Transfer event topic. */
+const TRANSFER_TOPIC =
+  "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+/**
+ * Confirm a settle tx directly on X Layer via public JSON-RPC. Used only by the
+ * settlement-timeout recovery hook. "Confirmed" means: the receipt exists, the tx
+ * succeeded (status 0x1), and its logs contain an ERC-20 Transfer on our settlement
+ * asset contract paying OUR payTo address — not merely "some tx with this hash
+ * exists". Read-only; fails closed (false) on any RPC error.
+ */
+export async function txSucceededOnChain(txHash: string): Promise<boolean> {
+  try {
+    const res = await fetch(config.payment.rpcUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "eth_getTransactionReceipt",
+        params: [txHash],
+      }),
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return false;
+    const { result } = (await res.json()) as {
+      result?: {
+        status?: string;
+        logs?: { address?: string; topics?: string[] }[];
+      } | null;
+    };
+    if (!result || result.status !== "0x1") return false;
+    const asset = config.payment.assetAddress.toLowerCase();
+    const payToTopic =
+      "0x" + config.payment.payTo.toLowerCase().replace(/^0x/, "").padStart(64, "0");
+    return (result.logs ?? []).some(
+      (log) =>
+        log.address?.toLowerCase() === asset &&
+        log.topics?.[0] === TRANSFER_TOPIC &&
+        log.topics?.[2]?.toLowerCase() === payToTopic,
+    );
+  } catch (err) {
+    console.warn(`[x402] on-chain settle confirmation failed: ${(err as Error).message}`);
+    return false;
+  }
+}
+
 /**
  * Register the x402 payment gate on the Fastify app. Every method on PAID_PATH is
  * protected: unpaid requests (including the OKX x402-check GET probe) receive the
@@ -262,6 +309,19 @@ export function registerX402Gate(app: FastifyInstance): void {
     const token = ctx.adapter.getHeader("x-payment");
     if (token && token === config.payment.devToken) return { grantAccess: true };
   });
+
+  // Settlement-timeout recovery (the Keryx battle scar): the OKX facilitator often
+  // reports status:"timeout" on slow settle confirmation even though the USDT0
+  // transfer already landed on-chain. Without recovery the SDK turns that into a
+  // 402 AFTER the buyer paid — which the marketplace reads as a failed service.
+  // Recovery order inside the SDK's processSettlement:
+  //   1. pollSettleStatus() against the facilitator for up to pollDeadlineMs;
+  //   2. this hook — confirm the tx receipt directly on X Layer RPC;
+  //   3. only if BOTH fail does the caller get a 402.
+  httpServer.setPollDeadline(10_000);
+  httpServer.onSettlementTimeout(async (txHash: string) => ({
+    confirmed: await txSucceededOnChain(txHash),
+  }));
 
   paymentMiddlewareFromHTTPServer(app, httpServer);
 
