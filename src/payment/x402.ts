@@ -347,6 +347,37 @@ export function registerX402Gate(app: FastifyInstance): void {
     confirmed: await txSucceededOnChain(txHash),
   }));
 
+  // ── Inbound payload normalization (MUST register before the SDK middleware) ──
+  // Root cause of the live-402 bounce (Railway upstreamRqDuration=2ms, facilitator
+  // never called): the onSend hook below advertises `decimals` + a per-entry
+  // `resource` object in each accepts entry (the marketplace validator requires
+  // them — dropping them was the documented 07-18 rejection), but the SDK builds
+  // its INTERNAL requirements without those fields, and findMatchingRequirements
+  // deepEquals the buyer's echoed `accepted` (minus `extra`) against them. The
+  // buyer faithfully echoes the advertised entry → extra keys → no match →
+  // "No matching payment requirements found" → instant 402 before verify.
+  // Fix: strip the advertise-only keys from payload.accepted so matching sees the
+  // SDK's own shape. Safe for both schemes — the EIP-3009 authorization (exact)
+  // and sessionCert (aggr_deferred) sign payment params, not the accepted JSON.
+  app.addHook("onRequest", async (req) => {
+    if (!req.url.startsWith(PAID_PATH)) return;
+    const raw = req.headers["payment-signature"];
+    if (typeof raw !== "string" || raw === "") return;
+    try {
+      const payload = JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
+      const acc = payload?.accepted;
+      if (acc && typeof acc === "object" && ("decimals" in acc || "resource" in acc)) {
+        delete acc.decimals;
+        delete acc.resource;
+        req.headers["payment-signature"] = Buffer.from(JSON.stringify(payload)).toString(
+          "base64",
+        );
+      }
+    } catch {
+      // Not base64 JSON we recognize — leave it; the SDK rejects it properly.
+    }
+  });
+
   paymentMiddlewareFromHTTPServer(app, httpServer);
 
   // The SDK builds its own PAYMENT-REQUIRED header and it omits `decimals` and the
