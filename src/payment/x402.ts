@@ -42,11 +42,22 @@ import type {
 } from "@okxweb3/x402-core/types";
 import { OKXFacilitatorClient } from "@okxweb3/x402-core";
 import { ExactEvmScheme } from "@okxweb3/x402-evm/exact/server";
+import { AggrDeferredEvmScheme } from "@okxweb3/x402-evm/deferred/server";
 import type { Network } from "@okxweb3/x402-core/types";
 import { config, paymentLiveConfigured } from "../config.js";
 
-/** The one payment scheme we sell under — one-shot exact payment (A2MCP standard). */
+/**
+ * The payment schemes we sell under. BOTH are required in practice:
+ *   - "exact"         : one-shot EIP-3009 transfer — plain EOA wallets.
+ *   - "aggr_deferred" : session-cert deferred settlement — OKX agentic (AA)
+ *     wallets, which is what the OKX marketplace review bot and OKX.AI user
+ *     agents pay with. Advertising only "exact" means the platform tester
+ *     receives a challenge it cannot satisfy → verify never succeeds → the
+ *     review task times out ("unable to receive a response", 3rd rejection).
+ */
 const SCHEME = "exact";
+const SCHEME_AGGR = "aggr_deferred";
+const SCHEMES = [SCHEME, SCHEME_AGGR] as const;
 
 /** config.payment.network as the SDK's CAIP-2 Network type (normalized in config.ts). */
 const NETWORK = config.payment.network as Network;
@@ -88,26 +99,24 @@ export function buildChallenge(): Record<string, unknown> {
       description: DESCRIPTION,
       mimeType: "application/json",
     },
-    accepts: [
-      {
-        scheme: SCHEME,
-        network: config.payment.network,
-        amount: toAtomic(config.payment.priceUsd, config.payment.assetDecimals),
-        asset: config.payment.assetAddress,
-        payTo: config.payment.payTo,
-        maxTimeoutSeconds: config.payment.maxTimeoutSeconds,
-        extra: { name: config.payment.asset, version: "1" },
-      },
-    ],
+    accepts: SCHEMES.map((scheme) => ({
+      scheme,
+      network: config.payment.network,
+      amount: toAtomic(config.payment.priceUsd, config.payment.assetDecimals),
+      asset: config.payment.assetAddress,
+      payTo: config.payment.payTo,
+      maxTimeoutSeconds: config.payment.maxTimeoutSeconds,
+      extra: { name: config.payment.asset, version: "1" },
+    })),
   };
 }
 
 // ── Facilitator client ────────────────────────────────────────────────────────
 
-/** The supported-kind we sell under — used as fallback + guaranteed registration. */
+/** The supported-kinds we sell under — used as fallback + guaranteed registration. */
 function staticSupported(): SupportedResponse {
   return {
-    kinds: [{ x402Version: 2, scheme: SCHEME, network: NETWORK }],
+    kinds: SCHEMES.map((scheme) => ({ x402Version: 2, scheme, network: NETWORK })),
     extensions: [],
     signers: {},
   };
@@ -131,11 +140,13 @@ class ResilientFacilitator implements FacilitatorClient {
     if (!this.inner) return fallback;
     try {
       const real = await this.inner.getSupported();
-      const ours = fallback.kinds[0];
-      const present = real.kinds?.some(
-        (k) => k.x402Version === 2 && k.scheme === SCHEME && k.network === ours.network,
-      );
-      if (!present) real.kinds = [...(real.kinds ?? []), ours];
+      for (const ours of fallback.kinds) {
+        const present = real.kinds?.some(
+          (k) =>
+            k.x402Version === 2 && k.scheme === ours.scheme && k.network === ours.network,
+        );
+        if (!present) real.kinds = [...(real.kinds ?? []), ours];
+      }
       return real;
     } catch (err) {
       console.warn(
@@ -201,16 +212,17 @@ function makeFacilitator(): ResilientFacilitator {
  * handler runs and settled after it succeeds. Must be called before app.listen().
  */
 export function registerX402Gate(app: FastifyInstance): void {
-  const server = new x402ResourceServer(makeFacilitator()).register(
-    NETWORK,
-    new ExactEvmScheme(),
-  );
+  const server = new x402ResourceServer(makeFacilitator())
+    .register(NETWORK, new ExactEvmScheme())
+    .register(NETWORK, new AggrDeferredEvmScheme());
 
   const routes: RoutesConfig = {
     // No verb prefix = every method (GET/HEAD probes must see the 402 challenge too).
     [PAID_PATH]: {
-      accepts: {
-        scheme: SCHEME,
+      // One PaymentOption per scheme: exact (EOA) + aggr_deferred (OKX agentic/AA
+      // wallets — the scheme the marketplace review bot pays with).
+      accepts: SCHEMES.map((scheme) => ({
+        scheme,
         network: NETWORK,
         payTo: config.payment.payTo,
         // AssetAmount form: exact atomic units of the exact contract we list on-chain —
@@ -223,7 +235,7 @@ export function registerX402Gate(app: FastifyInstance): void {
         // EIP-712 domain of the asset — buyers sign against this; it must match the
         // token contract's own domain (USD₮0 / "1" for USDT0 on X Layer).
         extra: { name: config.payment.asset, version: "1" },
-      },
+      })),
       resource: resourceUrl(),
       description: DESCRIPTION,
       mimeType: "application/json",
